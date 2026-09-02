@@ -1,0 +1,85 @@
+# Basanos collector -- systemd unit, EXAMPLE / TEMPLATE.
+#
+# Sanitized: every path, user, and value below is a placeholder. No real
+# host, IP, or secret belongs in this file or in the real unit derived
+# from it -- the collector never needs one (it only makes outbound GET
+# requests to the public Technocore API; base_url is a CLI flag/config
+# value, not a systemd Environment= entry, and there's nothing else here
+# to leak).
+#
+# Install as /etc/systemd/system/basanos.service (drop the .example),
+# adjust the placeholders marked below, then:
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now basanos
+# See deploy/DEPLOY.md for the full runbook.
+#
+# ExecStart below is the collector's own continuous LOOP mode -- the
+# invocation is `python -m collector` with no `--once` (collector/cli.py
+# reads `args.once` and only calls `collector.run_once()` when it's set;
+# omitting the flag falls through to `collector.run_loop()` instead,
+# collector/cli.py lines ~150 and ~180). `--data-dir` is passed
+# explicitly and points at ReadWritePaths= below -- omitting it would
+# default to a `data/` directory relative to WorkingDirectory, which
+# ProtectSystem=strict makes read-only, and the collector would fail on
+# its first write.
+
+[Unit]
+Description=Basanos -- read-only Technocore commons collector
+Documentation=https://github.com/midasbal/Basanos
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+# --- ADJUST: who runs it, where it lives -----------------------------
+# Non-root, dedicated service user/group. Create with:
+#   sudo useradd --system --create-home --shell /usr/sbin/nologin basanos
+User=basanos
+Group=basanos
+
+# The cloned repo root (git clone leaves the checkout in a directory
+# named after the repo, "Basanos", under whatever parent you chose).
+WorkingDirectory=/opt/basanos/Basanos
+
+# The project's own venv -- see DEPLOY.md's setup steps. Use the venv's
+# python directly (no `source .../activate` in a systemd unit).
+ExecStart=/opt/basanos/Basanos/.venv/bin/python -m collector --data-dir /var/lib/basanos
+
+# --- Confirmed macOS proxy-lookup stall workaround --------------------
+# NO_PROXY=* disables proxy lookup entirely for this process. It has no
+# effect on a normal Linux box with no proxy configured, so it's harmless
+# here -- included because it belongs in the service's own environment,
+# not something to rely on the host's shell profile for.
+Environment=NO_PROXY=*
+Environment=no_proxy=*
+
+# --- Restart policy ----------------------------------------------------
+# on-failure (not "always"): a clean exit (e.g. an operator's
+# `systemctl stop`, which sends SIGTERM and this process handles
+# gracefully -- see collector/cli.py's SIGTERM handler) is not a failure
+# and should not restart. RestartSec=15 is deliberately not aggressive:
+# a crash loop retrying every second would burn read budget against a
+# 120 reads/min limit for no benefit: the collector's own transient/429
+# handling already retries within one run; if it's exiting anyway,
+# something worse is wrong and hammering restarts won't fix it.
+Restart=on-failure
+RestartSec=15
+
+# --- Hardening -----------------------------------------------------
+# Outbound HTTPS (AF_INET/AF_INET6) still works; nothing else does.
+# Writing is allowed ONLY under the data dir below -- everything else
+# systemd can make read-only, it does.
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/basanos
+ProtectHome=true
+PrivateTmp=true
+RestrictAddressFamilies=AF_INET AF_INET6
+# If DNS resolution fails under this restriction on a given distro's
+# resolver setup (some route glibc's resolver through an AF_UNIX or
+# AF_NETLINK socket), that's the first thing to loosen -- diagnose with
+# `journalctl -u basanos` before changing this line.
+
+[Install]
+WantedBy=multi-user.target

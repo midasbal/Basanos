@@ -10,6 +10,7 @@ invoked automatically by tests or this module's own build/import.
 """
 
 import argparse
+import signal
 import sys
 
 from .config import (
@@ -27,8 +28,16 @@ from .config import (
     DEFAULT_SNAPSHOT_MAX_ATTEMPTS,
     DEFAULT_SNAPSHOT_TIMEOUT,
 )
-from .core import Collector
+from .core import Collector, utcnow_iso
 from .http_client import TechnocoreClient
+
+
+def _raise_keyboard_interrupt(signum, frame):
+    # systemd sends SIGTERM for a normal stop/restart; translating it into
+    # the same KeyboardInterrupt Ctrl-C already raises means run_loop()
+    # itself needs no special-casing -- one exception path, one place
+    # (below) that writes the session-stop record on the way out.
+    raise KeyboardInterrupt()
 
 
 def build_arg_parser():
@@ -166,9 +175,11 @@ def main(argv=None):
         f"(message_interval={config.message_interval}s, "
         f"snapshot_interval={config.snapshot_interval}s, rooms={config.rooms}); Ctrl-C to stop"
     )
+    signal.signal(signal.SIGTERM, _raise_keyboard_interrupt)
     try:
         collector.run_loop()
     except KeyboardInterrupt:
+        collector.uptime_tracker.record_stop(utcnow_iso())
         print("stopped")
     return 0
 

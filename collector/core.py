@@ -17,7 +17,7 @@ from .config import (
     DEFAULT_SNAPSHOT_MAX_ATTEMPTS,
     DEFAULT_SNAPSHOT_TIMEOUT,
 )
-from .coverage import CoverageTracker, gap_dropped_count
+from .coverage import CoverageTracker, UptimeTracker, gap_dropped_count
 from .http_client import TransientFetchError
 from .storage import append_jsonl, load_json, save_json_atomic
 
@@ -388,6 +388,7 @@ class Collector:
         self.config = config
         source = config.base_url
         self.coverage_tracker = CoverageTracker(config.data_dir)
+        self.uptime_tracker = UptimeTracker(config.data_dir)
         self.snapshotter = RoomsSnapshotter(
             client,
             config.data_dir,
@@ -447,7 +448,13 @@ class Collector:
         self.record_coverage()
         return results
 
-    def run_loop(self, stop_after=None, sleep_fn=time.sleep, monotonic_fn=time.monotonic):
+    def run_loop(
+        self,
+        stop_after=None,
+        sleep_fn=time.sleep,
+        monotonic_fn=time.monotonic,
+        now_fn=utcnow_iso,
+    ):
         """Continuous collection loop with two independent, fixed cadences
         off a monotonic clock -- single-threaded, no async, no busy-spin.
 
@@ -458,7 +465,10 @@ class Collector:
         interval is the pacing, not server-side long-poll.
 
         SNAPSHOT cadence (`config.snapshot_interval`, default 300s):
-        captures /rooms and appends a coverage.jsonl report.
+        captures /rooms and appends a coverage.jsonl report. Also where
+        the uptime heartbeat is written (data/uptime_state.json) --
+        cheaper than doing it every message tick, and still frequent
+        enough to be a useful lower bound on "when did this go quiet".
 
         Each tick checks the message cadence BEFORE the snapshot cadence,
         so a due message-drain is delayed by at most one in-flight
@@ -467,13 +477,29 @@ class Collector:
         due next, capped at ~1s, so it neither busy-spins nor sleeps
         through a cadence that's about to come due.
 
+        A session-start record (data/sessions.jsonl) is written once,
+        here, before the loop begins. There is no matching session-stop
+        write inside this method: SIGTERM/Ctrl-C interrupt run_loop from
+        outside (a plain exception propagating up, same as any other
+        uncaught error would), so the stop record is the caller's job --
+        see collector/cli.py, which installs a SIGTERM handler and writes
+        it after run_loop returns control via KeyboardInterrupt. Nothing
+        about session/uptime tracking feeds into the coverage ratio yet
+        (see collector/coverage.py's UptimeTracker/compute_downtime_intervals).
+
         This is meant to be started by the operator against the live
         service, not invoked by the collector's own tests/build step.
         `stop_after` (int) limits the loop to N ticks, for tests.
+        `now_fn` is the wall-clock source for session/heartbeat
+        timestamps only (independent of `monotonic_fn`, which paces the
+        cadences) -- overridable for tests that need to observe it
+        advance deterministically.
         """
         message_interval = self.config.message_interval
         snapshot_interval = self.config.snapshot_interval
         sleep_cap = 1.0
+
+        self.uptime_tracker.record_start(now_fn())
 
         start = monotonic_fn()
         next_message_due = start
@@ -494,6 +520,7 @@ class Collector:
             if now >= next_snapshot_due:
                 self.snapshotter.snapshot()
                 self.record_coverage(now=None)
+                self.uptime_tracker.heartbeat(now_fn())
                 next_snapshot_due += snapshot_interval
                 if next_snapshot_due <= now:
                     next_snapshot_due = now + snapshot_interval
