@@ -4,9 +4,11 @@ Signed by the reproducible throwaway fixture key from
 tests/fixtures/make_fixtures.py -- no real did:key identity involved.
 """
 
+import pytest
+
 from helpers import load_fixture
 
-from collector.verify import UnsupportedKeyType, is_signed, verify_record
+from collector.verify import MalformedRecord, UnsupportedKeyType, is_signed, verify_record
 
 
 def _fixture_record():
@@ -54,11 +56,58 @@ def test_unsigned_nick_is_not_a_did_key():
     unsigned = next(m for m in page["messages"] if "sig" not in m)
     record = {"room": page["room"], "from": unsigned["from"]}
     assert is_signed(record) is False
-    try:
+    with pytest.raises(UnsupportedKeyType):
         verify_record(dict(record, nonce=0, text="", sig=""))
-        assert False, "expected UnsupportedKeyType"
-    except UnsupportedKeyType:
-        pass
+
+
+def test_malformed_did_key_raises_unsupported_key_type_not_a_raw_value_error():
+    # Regression: a did:key with non-base58 characters after the prefix
+    # used to raise a raw ValueError ("substring not found") from
+    # b58decode's alphabet lookup, not the module's own exception.
+    record = {
+        "room": "lobby",
+        "from": "did:key:z!!!not-base58!!!",
+        "text": "x",
+        "nonce": 1,
+        "sig": "",
+    }
+    with pytest.raises(UnsupportedKeyType):
+        verify_record(record)
+
+
+def test_malformed_did_key_wrong_length_raises_unsupported_key_type():
+    # A syntactically valid base58 string that decodes to the right
+    # multicodec prefix but the wrong key length used to raise a raw
+    # ValueError from cryptography's from_public_bytes.
+    from collector.verify import _B58_ALPHABET, _ED25519_MULTICODEC_PREFIX
+
+    def b58encode(data):
+        num = int.from_bytes(data, "big")
+        encoded = ""
+        while num > 0:
+            num, rem = divmod(num, 58)
+            encoded = chr(_B58_ALPHABET[rem]) + encoded
+        return encoded or "1"
+
+    too_short = b58encode(_ED25519_MULTICODEC_PREFIX + b"\x01\x02\x03")  # not 32 bytes
+    record = {
+        "room": "lobby",
+        "from": f"did:key:z{too_short}",
+        "text": "x",
+        "nonce": 1,
+        "sig": "",
+    }
+    with pytest.raises(UnsupportedKeyType):
+        verify_record(record)
+
+
+def test_malformed_sig_raises_malformed_record_not_a_raw_binascii_error():
+    # Regression: a non-base64url sig used to raise a raw binascii.Error
+    # from base64.urlsafe_b64decode, not a module-level exception.
+    record = _fixture_record()
+    tampered = dict(record, sig="not valid base64 !!! @@@")
+    with pytest.raises(MalformedRecord):
+        verify_record(tampered)
 
 
 def test_all_signed_messages_in_fixture_pages_reverify():

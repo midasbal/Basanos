@@ -9,6 +9,14 @@ import os
 import time
 from datetime import datetime, timezone
 
+from .config import (
+    DEFAULT_MESSAGE_BACKOFF_CAP,
+    DEFAULT_MESSAGE_MAX_ATTEMPTS,
+    DEFAULT_MESSAGE_TIMEOUT,
+    DEFAULT_SNAPSHOT_BACKOFF_CAP,
+    DEFAULT_SNAPSHOT_MAX_ATTEMPTS,
+    DEFAULT_SNAPSHOT_TIMEOUT,
+)
 from .coverage import CoverageTracker, gap_dropped_count
 from .http_client import TransientFetchError
 from .storage import append_jsonl, load_json, save_json_atomic
@@ -38,18 +46,46 @@ def utcnow_iso():
 
 
 class RoomsSnapshotter:
-    """Captures GET /rooms?format=json as a timestamped time series."""
+    """Captures GET /rooms?format=json as a timestamped time series.
 
-    def __init__(self, client, data_dir, source):
+    Uses its own fail-fast HTTP budget (snapshot_timeout/
+    snapshot_max_attempts/snapshot_backoff_cap), separate from the
+    message-room fetch defaults on `client`. Confirmed live: a slow
+    /rooms under load can otherwise burn the full message-room retry
+    budget (minutes) and freeze the single-threaded collection loop for
+    that whole time, during which a fast, small-retention room like
+    lobby loses traffic permanently to ring eviction. The snapshot is
+    best-effort context; that loss is not recoverable, so a slow or
+    failing snapshot must give up in single-digit seconds, not minutes --
+    see collector/config.py's DEFAULT_SNAPSHOT_* for the exact,
+    provable worst case these defaults produce.
+    """
+
+    def __init__(
+        self,
+        client,
+        data_dir,
+        source,
+        snapshot_timeout=DEFAULT_SNAPSHOT_TIMEOUT,
+        snapshot_max_attempts=DEFAULT_SNAPSHOT_MAX_ATTEMPTS,
+        snapshot_backoff_cap=DEFAULT_SNAPSHOT_BACKOFF_CAP,
+    ):
         self.client = client
         self.path = os.path.join(data_dir, "rooms_snapshots.jsonl")
         self.failures_path = os.path.join(data_dir, "failures.jsonl")
         self.source = source
+        self.snapshot_timeout = snapshot_timeout
+        self.snapshot_max_attempts = snapshot_max_attempts
+        self.snapshot_backoff_cap = snapshot_backoff_cap
 
     def snapshot(self, now=None):
         captured_at = now or utcnow_iso()
         try:
-            payload = self.client.get_rooms_overview()
+            payload = self.client.get_rooms_overview(
+                timeout=self.snapshot_timeout,
+                max_attempts=self.snapshot_max_attempts,
+                backoff_cap=self.snapshot_backoff_cap,
+            )
         except TransientFetchError as exc:
             append_jsonl(
                 self.failures_path,
@@ -93,6 +129,16 @@ def detect_gap(since, first_seq, count):
     return first_seq > since + 1
 
 
+class MalformedPageError(TransientFetchError):
+    """A page's numeric envelope (count/first_seq/last_seq, or a message's
+    seq) wasn't trustworthy enough to process -- e.g. a non-int value from
+    an untrusted response. Treated exactly like a failed fetch: record and
+    move on without advancing the cursor for this page, rather than let a
+    raw KeyError/TypeError reach detect_gap's arithmetic or
+    fetch_and_store's page-length comparison.
+    """
+
+
 class RoomFollower:
     """Follows one room (or the /r/events discovery log) with a persisted
     `since` cursor, appending every new message and deduping by (room, seq).
@@ -101,8 +147,16 @@ class RoomFollower:
     limit-sized pages and advancing the cursor, one stored page at a time,
     until a page comes back shorter than the limit (caught up), the
     per-pass page cap is hit (recorded, not hidden), or a page fetch fails
-    (recorded as a failure; the cursor stays at the last page that was
-    actually stored).
+    or fails validation (recorded as a failure; the cursor stays at the
+    last page that was actually stored).
+
+    Each page fetch uses its own fail-fast budget (message_timeout/
+    message_max_attempts/message_backoff_cap), the same mechanism
+    RoomsSnapshotter uses for the whole-commons snapshot. Confirmed live:
+    a single stalled get_room_page() call can otherwise block the
+    single-threaded loop long enough to lose a fast room's ring-buffer
+    history outright -- see collector/config.py's DEFAULT_MESSAGE_* for
+    the worst-case wall-clock these defaults produce.
     """
 
     def __init__(
@@ -114,6 +168,9 @@ class RoomFollower:
         page_limit=DEFAULT_PAGE_LIMIT,
         max_pages_per_drain=DEFAULT_MAX_PAGES_PER_DRAIN,
         coverage_tracker=None,
+        message_timeout=DEFAULT_MESSAGE_TIMEOUT,
+        message_max_attempts=DEFAULT_MESSAGE_MAX_ATTEMPTS,
+        message_backoff_cap=DEFAULT_MESSAGE_BACKOFF_CAP,
     ):
         self.client = client
         self.room = room
@@ -121,6 +178,9 @@ class RoomFollower:
         self.page_limit = page_limit
         self.max_pages_per_drain = max_pages_per_drain
         self.coverage_tracker = coverage_tracker or CoverageTracker(data_dir)
+        self.message_timeout = message_timeout
+        self.message_max_attempts = message_max_attempts
+        self.message_backoff_cap = message_backoff_cap
         room_dir = os.path.join(data_dir, "rooms", room)
         self.messages_path = os.path.join(room_dir, "messages.jsonl")
         self.state_path = os.path.join(room_dir, "state.json")
@@ -131,6 +191,27 @@ class RoomFollower:
     def _load_since(self):
         state = load_json(self.state_path, default={"since": 0})
         return state.get("since", 0)
+
+    def _validate_page(self, page):
+        """Raise MalformedPageError if the page's numeric envelope can't
+        be trusted. count/first_seq/last_seq stay optional (existing code
+        already tolerates them being absent or null -- see _store_page and
+        detect_gap); this only rejects a key that's PRESENT and non-null
+        but the wrong type, plus any message missing a valid int seq,
+        which has no such tolerant fallback.
+        """
+        for key in ("count", "first_seq", "last_seq"):
+            value = page.get(key)
+            if key in page and value is not None and not isinstance(value, int):
+                raise MalformedPageError(
+                    f"{self.room}: page.{key} is not an int: {value!r}"
+                )
+        for m in page.get("messages", []):
+            seq = m.get("seq")
+            if not isinstance(seq, int):
+                raise MalformedPageError(
+                    f"{self.room}: message missing or invalid seq: {m!r}"
+                )
 
     def _store_page(self, page, since, captured_at):
         """Apply one already-fetched page: gap check, append new messages
@@ -144,9 +225,11 @@ class RoomFollower:
         last_seq = page.get("last_seq")
 
         gap = detect_gap(since, first_seq, count)
-        # Same eligibility as detect_gap: a since==0 or empty page never
-        # counts as dropped, for the identical reason (see detect_gap).
-        dropped = gap_dropped_count(since, first_seq) if (since > 0 and count) else 0
+        # dropped is derived from gap, the single source of truth for
+        # eligibility, rather than a second independently-written
+        # (since > 0 and count) check -- two copies of the same rule can
+        # silently drift if one is edited and not the other.
+        dropped = gap_dropped_count(since, first_seq) if gap else 0
         if gap:
             append_jsonl(
                 self.gaps_path,
@@ -228,8 +311,15 @@ class RoomFollower:
             page_wait = wait if pages_fetched == 0 else 0  # long-poll only the first page
             try:
                 page = self.client.get_room_page(
-                    self.room, since=current_since, wait=page_wait, limit=self.page_limit
+                    self.room,
+                    since=current_since,
+                    wait=page_wait,
+                    limit=self.page_limit,
+                    timeout=self.message_timeout,
+                    max_attempts=self.message_max_attempts,
+                    backoff_cap=self.message_backoff_cap,
                 )
+                self._validate_page(page)
             except TransientFetchError as exc:
                 failed = True
                 error = str(exc)
@@ -298,13 +388,34 @@ class Collector:
         self.config = config
         source = config.base_url
         self.coverage_tracker = CoverageTracker(config.data_dir)
-        self.snapshotter = RoomsSnapshotter(client, config.data_dir, source)
+        self.snapshotter = RoomsSnapshotter(
+            client,
+            config.data_dir,
+            source,
+            snapshot_timeout=config.snapshot_timeout,
+            snapshot_max_attempts=config.snapshot_max_attempts,
+            snapshot_backoff_cap=config.snapshot_backoff_cap,
+        )
         self.events_follower = RoomFollower(
-            client, config.data_dir, EVENTS_ROOM, source, coverage_tracker=self.coverage_tracker
+            client,
+            config.data_dir,
+            EVENTS_ROOM,
+            source,
+            coverage_tracker=self.coverage_tracker,
+            message_timeout=config.message_timeout,
+            message_max_attempts=config.message_max_attempts,
+            message_backoff_cap=config.message_backoff_cap,
         )
         self.room_followers = [
             RoomFollower(
-                client, config.data_dir, room, source, coverage_tracker=self.coverage_tracker
+                client,
+                config.data_dir,
+                room,
+                source,
+                coverage_tracker=self.coverage_tracker,
+                message_timeout=config.message_timeout,
+                message_max_attempts=config.message_max_attempts,
+                message_backoff_cap=config.message_backoff_cap,
             )
             for room in config.rooms
         ]

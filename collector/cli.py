@@ -17,9 +17,15 @@ from .config import (
     DEFAULT_BASE_URL,
     DEFAULT_DATA_DIR,
     DEFAULT_LONG_POLL_WAIT,
+    DEFAULT_MESSAGE_BACKOFF_CAP,
     DEFAULT_MESSAGE_INTERVAL,
+    DEFAULT_MESSAGE_MAX_ATTEMPTS,
+    DEFAULT_MESSAGE_TIMEOUT,
     DEFAULT_ROOMS,
+    DEFAULT_SNAPSHOT_BACKOFF_CAP,
     DEFAULT_SNAPSHOT_INTERVAL,
+    DEFAULT_SNAPSHOT_MAX_ATTEMPTS,
+    DEFAULT_SNAPSHOT_TIMEOUT,
 )
 from .core import Collector
 from .http_client import TechnocoreClient
@@ -45,6 +51,46 @@ def build_arg_parser():
         type=float,
         default=None,
         help="[deprecated] alias for --snapshot-interval, kept for old scripts",
+    )
+    p.add_argument(
+        "--snapshot-timeout",
+        type=float,
+        default=DEFAULT_SNAPSHOT_TIMEOUT,
+        help="per-attempt HTTP timeout (seconds) for the /rooms snapshot's own "
+        "fail-fast budget, separate from message-room fetches",
+    )
+    p.add_argument(
+        "--snapshot-max-attempts",
+        type=int,
+        default=DEFAULT_SNAPSHOT_MAX_ATTEMPTS,
+        help="total attempts (including the first) before the snapshot gives up "
+        "and records a failure",
+    )
+    p.add_argument(
+        "--snapshot-backoff-cap",
+        type=float,
+        default=DEFAULT_SNAPSHOT_BACKOFF_CAP,
+        help="ceiling (seconds) on the snapshot's inter-attempt/429 backoff sleep",
+    )
+    p.add_argument(
+        "--message-timeout",
+        type=float,
+        default=DEFAULT_MESSAGE_TIMEOUT,
+        help="per-attempt HTTP timeout (seconds) for message-room/events fetches' "
+        "own fail-fast budget",
+    )
+    p.add_argument(
+        "--message-max-attempts",
+        type=int,
+        default=DEFAULT_MESSAGE_MAX_ATTEMPTS,
+        help="total attempts (including the first) before a message-room fetch "
+        "gives up and records a failure",
+    )
+    p.add_argument(
+        "--message-backoff-cap",
+        type=float,
+        default=DEFAULT_MESSAGE_BACKOFF_CAP,
+        help="ceiling (seconds) on a message-room fetch's inter-attempt/429 backoff sleep",
     )
     p.add_argument(
         "--rooms",
@@ -79,6 +125,12 @@ def main(argv=None):
         base_url=args.base_url,
         message_interval=args.message_interval,
         snapshot_interval=snapshot_interval,
+        snapshot_timeout=args.snapshot_timeout,
+        snapshot_max_attempts=args.snapshot_max_attempts,
+        snapshot_backoff_cap=args.snapshot_backoff_cap,
+        message_timeout=args.message_timeout,
+        message_max_attempts=args.message_max_attempts,
+        message_backoff_cap=args.message_backoff_cap,
         rooms=args.rooms,
         data_dir=args.data_dir,
         long_poll_wait=args.long_poll_wait,

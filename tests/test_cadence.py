@@ -110,11 +110,13 @@ def test_message_due_is_never_delayed_more_than_one_snapshot_call(tmp_path):
     call_order = []
 
     class OrderTrackingClient:
-        def get_rooms_overview(self):
+        def get_rooms_overview(self, timeout=None, max_attempts=None, backoff_cap=None):
             call_order.append("snapshot")
             return {"rooms": [], "total": 0}
 
-        def get_room_page(self, room, since=0, wait=0, limit=None):
+        def get_room_page(
+            self, room, since=0, wait=0, limit=None, timeout=None, max_attempts=None, backoff_cap=None
+        ):
             call_order.append(f"message:{room}")
             return _empty_page(room)
 

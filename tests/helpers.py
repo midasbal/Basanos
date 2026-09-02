@@ -27,11 +27,13 @@ class FakeClient:
         self._call_index = {}
         self.calls = []
 
-    def get_rooms_overview(self):
+    def get_rooms_overview(self, timeout=None, max_attempts=None, backoff_cap=None):
         self.calls.append(("rooms_overview", None))
         return self.rooms_overview
 
-    def get_room_page(self, room, since=0, wait=0, limit=None):
+    def get_room_page(
+        self, room, since=0, wait=0, limit=None, timeout=None, max_attempts=None, backoff_cap=None
+    ):
         self.calls.append(("room_page", room, since, wait, limit))
         pages = self.room_pages[room]
         if isinstance(pages, list):
@@ -57,8 +59,10 @@ class AlwaysFailingClient:
         self.calls += 1
         raise self.exc() if callable(self.exc) else self.exc
 
-    def get_room_page(self, room, since=0, wait=0, limit=None):
+    def get_room_page(
+        self, room, since=0, wait=0, limit=None, timeout=None, max_attempts=None, backoff_cap=None
+    ):
         self._raise()
 
-    def get_rooms_overview(self):
+    def get_rooms_overview(self, timeout=None, max_attempts=None, backoff_cap=None):
         self._raise()

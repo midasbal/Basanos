@@ -3,6 +3,9 @@ and transient failures (timeouts/connection errors/5xx) retry with
 exponential backoff before giving up.
 """
 
+import json
+
+import pytest
 import requests
 
 from helpers import load_fixture
@@ -44,20 +47,28 @@ def test_parse_wait_seconds_default_when_nothing_present():
 
 
 class _FakeResponse:
-    def __init__(self, status_code, text_body="", headers=None, json_body=None):
+    """Stands in for a requests.Response fetched with stream=True: the
+    client reads its body via iter_content(), never .text/.json()/
+    .raise_for_status() directly (see _read_bounded_body in http_client.py).
+    """
+
+    def __init__(self, status_code, text_body="", headers=None, json_body=None, body_bytes=None):
         self.status_code = status_code
-        self.text = text_body
         self.headers = headers or {}
-        self._json_body = json_body
+        if body_bytes is not None:
+            self._body_bytes = body_bytes
+        elif json_body is not None:
+            self._body_bytes = json.dumps(json_body).encode("utf-8")
+        else:
+            self._body_bytes = text_body.encode("utf-8")
+        self.closed = False
 
-    def json(self):
-        if self._json_body is None:
-            raise ValueError("not json")
-        return self._json_body
+    def iter_content(self, chunk_size=65536):
+        for i in range(0, len(self._body_bytes), chunk_size):
+            yield self._body_bytes[i : i + chunk_size]
 
-    def raise_for_status(self):
-        if self.status_code >= 400:
-            raise requests.exceptions.HTTPError(f"HTTP {self.status_code}")
+    def close(self):
+        self.closed = True
 
 
 class _FakeSession:
@@ -68,7 +79,7 @@ class _FakeSession:
         self.headers = {}
         self.requests = []
 
-    def get(self, url, params=None, timeout=None):
+    def get(self, url, params=None, timeout=None, stream=False):
         self.requests.append((url, params))
         item = self._responses.pop(0)
         if isinstance(item, Exception):
@@ -104,6 +115,48 @@ def test_client_backs_off_by_confirmed_retry_after_then_retries():
     assert result == ok_body
     assert sleeps == [4.0]  # backed off exactly the confirmed Retry-After value
     assert len(session.requests) == 2
+
+
+# --- untrusted Retry-After: clamped, never crashes, never stalls forever -
+
+
+def test_negative_retry_after_is_clamped_to_zero_not_a_crash():
+    # Regression: time.sleep(negative) raises ValueError uncaught. A
+    # negative Retry-After (malformed/hostile) must not reach _sleep() as
+    # a negative number.
+    ok_body = {"rooms": [], "total": 0}
+    session = _FakeSession(
+        [
+            _FakeResponse(429, headers={"Retry-After": "-100"}),
+            _FakeResponse(200, json_body=ok_body),
+        ]
+    )
+    client, sleeps = _client(session)
+
+    result = client.get_rooms_overview()  # must not raise ValueError
+
+    assert result == ok_body
+    assert sleeps == [0.0]
+
+
+def test_huge_retry_after_is_clamped_to_the_backoff_cap_not_an_unbounded_stall():
+    # Regression: an unclamped wait_s honors whatever the server claims,
+    # verbatim -- a hostile or misconfigured Retry-After of a huge number
+    # would stall this single-threaded client (and therefore the whole
+    # collection loop) for that entire duration.
+    ok_body = {"rooms": [], "total": 0}
+    session = _FakeSession(
+        [
+            _FakeResponse(429, headers={"Retry-After": "999999999"}),
+            _FakeResponse(200, json_body=ok_body),
+        ]
+    )
+    client, sleeps = _client(session, transient_backoff_cap=30.0)
+
+    result = client.get_rooms_overview()  # must not stall on the full 999999999s
+
+    assert result == ok_body
+    assert sleeps == [30.0]  # clamped to transient_backoff_cap, not honored verbatim
 
 
 # --- transient failures: timeouts / connection errors / 5xx --------------
@@ -162,11 +215,8 @@ def test_client_gives_up_after_max_transient_retries_and_raises():
     session = _FakeSession([_FakeResponse(503)] * 10)  # never succeeds
     client, sleeps = _client(session, max_transient_retries=3, transient_backoff_base=0.01)
 
-    try:
+    with pytest.raises(TransientFetchError, match="503"):
         client.get_rooms_overview()
-        assert False, "expected TransientFetchError"
-    except TransientFetchError as exc:
-        assert "503" in str(exc)
 
     assert len(session.requests) == 4  # 1 initial + 3 retries
     assert len(sleeps) == 3

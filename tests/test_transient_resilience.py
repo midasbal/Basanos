@@ -79,10 +79,12 @@ def test_one_failing_room_does_not_block_the_rest_of_the_pass(tmp_path):
     class MixedClient:
         """rooms overview + events succeed; the "lobby" room always fails."""
 
-        def get_rooms_overview(self):
+        def get_rooms_overview(self, timeout=None, max_attempts=None, backoff_cap=None):
             return {"rooms": [], "total": 0}
 
-        def get_room_page(self, room, since=0, wait=0, limit=None):
+        def get_room_page(
+            self, room, since=0, wait=0, limit=None, timeout=None, max_attempts=None, backoff_cap=None
+        ):
             if room == "lobby":
                 raise _exc()
             return {
