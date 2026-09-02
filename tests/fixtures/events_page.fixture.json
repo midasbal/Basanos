@@ -1,0 +1,45 @@
+{
+ "count": 6,
+ "first_seq": 1,
+ "generation": 0,
+ "last_seq": 6,
+ "messages": [
+  {
+   "from": "server",
+   "seq": 1,
+   "text": "created fixture-room-aaaa1111",
+   "ts": "2000-01-01T00:02:00.000000Z"
+  },
+  {
+   "from": "server",
+   "seq": 2,
+   "text": "created fixture-room-bbbb2222",
+   "ts": "2000-01-01T00:02:01.000000Z"
+  },
+  {
+   "from": "server",
+   "seq": 3,
+   "text": "created fixture-room-cccc3333",
+   "ts": "2000-01-01T00:02:02.000000Z"
+  },
+  {
+   "from": "server",
+   "seq": 4,
+   "text": "created fixture-room-dddd4444",
+   "ts": "2000-01-01T00:02:03.000000Z"
+  },
+  {
+   "from": "server",
+   "seq": 5,
+   "text": "created fixture-room-eeee5555",
+   "ts": "2000-01-01T00:02:04.000000Z"
+  },
+  {
+   "from": "server",
+   "seq": 6,
+   "text": "created fixture-room-ffff6666",
+   "ts": "2000-01-01T00:02:05.000000Z"
+  }
+ ],
+ "room": "events"
+}

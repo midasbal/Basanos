@@ -1,0 +1,136 @@
+{
+ "_note": "Synthetic sequence of 3 polls of a fast room with page_limit=5, cursor starting at since=1000. Pages 1-2 are full (5 msgs each) so the drain loop must keep paging; page 3 is short (3 < 5) which signals caught up.",
+ "pages": [
+  {
+   "count": 5,
+   "first_seq": 1001,
+   "generation": 0,
+   "last_seq": 1005,
+   "messages": [
+    {
+     "from": "did:key:z6MkfK5NC9JAWQWu5YTaxcmwYTXnbvQ88nY5pLmGuXJhorjB",
+     "nonce": 1700000031001,
+     "seq": 1001,
+     "sig": "3EmZm1mxgt6UM44n9XAyjL-roJ5tQRYZi_DekxyFfjc5vntre4GtqRXog0FitllRuol4EJeRqTjxFIeLxBQOAQ",
+     "text": "drain fixture message 1001",
+     "ts": "2000-01-01T00:04:01.000000Z"
+    },
+    {
+     "from": "did:key:z6MkfK5NC9JAWQWu5YTaxcmwYTXnbvQ88nY5pLmGuXJhorjB",
+     "nonce": 1700000031002,
+     "seq": 1002,
+     "sig": "DPZtH2v-NtZlPfW_bNKFbhRNvDmvB__gMkD3VMnA9MB276ScOXx7htiSzSF63Wq4M1QgySSNWJZtwKc86tZwDQ",
+     "text": "drain fixture message 1002",
+     "ts": "2000-01-01T00:04:02.000000Z"
+    },
+    {
+     "from": "did:key:z6MkfK5NC9JAWQWu5YTaxcmwYTXnbvQ88nY5pLmGuXJhorjB",
+     "nonce": 1700000031003,
+     "seq": 1003,
+     "sig": "lVXjugnZdp0Lmu5AUFEWufughJWB0nA9aF3XC9vygsNkoQRo_-4NLDT6EE8f1VMAuI-rs7gJeOj3-DXcAn4ODg",
+     "text": "drain fixture message 1003",
+     "ts": "2000-01-01T00:04:03.000000Z"
+    },
+    {
+     "from": "did:key:z6MkfK5NC9JAWQWu5YTaxcmwYTXnbvQ88nY5pLmGuXJhorjB",
+     "nonce": 1700000031004,
+     "seq": 1004,
+     "sig": "XpHWuGpju5W4KNI6loFpHjOG2zf2mg6KckhgRZtVSSJDV05o6A89-gREgRANdr8OGgn-r9BAxr9532W43MZYDg",
+     "text": "drain fixture message 1004",
+     "ts": "2000-01-01T00:04:04.000000Z"
+    },
+    {
+     "from": "did:key:z6MkfK5NC9JAWQWu5YTaxcmwYTXnbvQ88nY5pLmGuXJhorjB",
+     "nonce": 1700000031005,
+     "seq": 1005,
+     "sig": "lBPPxwezA5zVQChiCRDASFcXSZk7KWao-thFzo_GWViv3d0j5IL0QmvCv7dN6HqzdD6hlpZLTAXyO7UAP3c3Dw",
+     "text": "drain fixture message 1005",
+     "ts": "2000-01-01T00:04:05.000000Z"
+    }
+   ],
+   "room": "lobby"
+  },
+  {
+   "count": 5,
+   "first_seq": 1006,
+   "generation": 0,
+   "last_seq": 1010,
+   "messages": [
+    {
+     "from": "did:key:z6MkfK5NC9JAWQWu5YTaxcmwYTXnbvQ88nY5pLmGuXJhorjB",
+     "nonce": 1700000031006,
+     "seq": 1006,
+     "sig": "a5rMrYEqFL1lpji6M1-9opC2PmyKyoWQ-aP0ElDjRZvJ6OuCcnRxaD2PPjIgEtvS6qjBKiS0jmlJhmhn5otZCw",
+     "text": "drain fixture message 1006",
+     "ts": "2000-01-01T00:04:06.000000Z"
+    },
+    {
+     "from": "did:key:z6MkfK5NC9JAWQWu5YTaxcmwYTXnbvQ88nY5pLmGuXJhorjB",
+     "nonce": 1700000031007,
+     "seq": 1007,
+     "sig": "IAwUSGcqyqXjJ-rmrDp2BGVEpatgMja5t89Ie6tIuLGWFTa4HBduemEvK97cT3UQy6sQRm4xVxDwiAzytgPKAw",
+     "text": "drain fixture message 1007",
+     "ts": "2000-01-01T00:04:07.000000Z"
+    },
+    {
+     "from": "did:key:z6MkfK5NC9JAWQWu5YTaxcmwYTXnbvQ88nY5pLmGuXJhorjB",
+     "nonce": 1700000031008,
+     "seq": 1008,
+     "sig": "X12wW-HE8rmgxPXCxf4JC-fJI7D7Mm2fP-8RbBGBr7HMVkDQvlTlti3S3I6Jk_y6ksmBkAjYpxXV7aNzzSHFCg",
+     "text": "drain fixture message 1008",
+     "ts": "2000-01-01T00:04:08.000000Z"
+    },
+    {
+     "from": "did:key:z6MkfK5NC9JAWQWu5YTaxcmwYTXnbvQ88nY5pLmGuXJhorjB",
+     "nonce": 1700000031009,
+     "seq": 1009,
+     "sig": "cB6Vs8DaXmkhZC3ZPARiKrKXRzOdYEPmGOz3lyl2bYnYVG83FyEZeY-OqdC1ORfBwEg7asOyoGvnuYP3djYnDA",
+     "text": "drain fixture message 1009",
+     "ts": "2000-01-01T00:04:09.000000Z"
+    },
+    {
+     "from": "did:key:z6MkfK5NC9JAWQWu5YTaxcmwYTXnbvQ88nY5pLmGuXJhorjB",
+     "nonce": 1700000031010,
+     "seq": 1010,
+     "sig": "9F0UdR_QT-Ag3QUC1tu0lRmciGC2VWiwIcWo0-xAVDPpy5jEX30VOJFVRBQ9gJA4KdP4kCN0uX6lM4wOajI6Bg",
+     "text": "drain fixture message 1010",
+     "ts": "2000-01-01T00:04:10.000000Z"
+    }
+   ],
+   "room": "lobby"
+  },
+  {
+   "count": 3,
+   "first_seq": 1011,
+   "generation": 0,
+   "last_seq": 1013,
+   "messages": [
+    {
+     "from": "did:key:z6MkfK5NC9JAWQWu5YTaxcmwYTXnbvQ88nY5pLmGuXJhorjB",
+     "nonce": 1700000031011,
+     "seq": 1011,
+     "sig": "rP9IH9ev8I1IgI4ORj3Rit0V8pveG3Mk6Wh_DW6eKhjEGRiWYHK0eqK75RNwVk2awJWh-ZXa_DOSAEKgWoogDg",
+     "text": "drain fixture message 1011",
+     "ts": "2000-01-01T00:04:11.000000Z"
+    },
+    {
+     "from": "did:key:z6MkfK5NC9JAWQWu5YTaxcmwYTXnbvQ88nY5pLmGuXJhorjB",
+     "nonce": 1700000031012,
+     "seq": 1012,
+     "sig": "N-RygW7wkHGCFma44WjJQqcYcXQEJ6Qi-yRu5jjBEO1Nz86I6b1DaiEgrr6FdvK5JyiIffq3TK5B6mhiTKgRBQ",
+     "text": "drain fixture message 1012",
+     "ts": "2000-01-01T00:04:12.000000Z"
+    },
+    {
+     "from": "did:key:z6MkfK5NC9JAWQWu5YTaxcmwYTXnbvQ88nY5pLmGuXJhorjB",
+     "nonce": 1700000031013,
+     "seq": 1013,
+     "sig": "87rbJzigfG1goEUeFRqBdgXTcmViObovidA5OaavcBQLVC9atUuhuchMEfUWREIjlZmM3F2KgTCVKr-nkLy-DQ",
+     "text": "drain fixture message 1013",
+     "ts": "2000-01-01T00:04:13.000000Z"
+    }
+   ],
+   "room": "lobby"
+  }
+ ]
+}

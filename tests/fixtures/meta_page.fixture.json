@@ -1,0 +1,49 @@
+{
+ "count": 5,
+ "first_seq": 200,
+ "generation": 0,
+ "last_seq": 204,
+ "messages": [
+  {
+   "from": "did:key:z6MkfK5NC9JAWQWu5YTaxcmwYTXnbvQ88nY5pLmGuXJhorjB",
+   "nonce": 1700000010001,
+   "seq": 200,
+   "sig": "iMDicjLVzNFARfBJzN1_1GtAhTBZw0I7WL3pNIoVgzIpimPDzSyu7yH4eER4Bp7GopyWb0J4t9rxnL_tfFKgBw",
+   "text": "meta room fixture message one",
+   "ts": "2000-01-01T00:01:00.000000Z"
+  },
+  {
+   "from": "did:key:z6MkhQHYrvezTzQXxiqnuoJTSkzskCGAR9E7dF3KaaRzL2Lc",
+   "nonce": 1700000010002,
+   "seq": 201,
+   "sig": "Ik8WMaNfGXzhsZ5E1ZQWXAVD4nc20sZWW3oVwUGxCIeG0FBADM5OvDRXuklnk2O_nb2OlC7RHHCtHkZdGhCEDA",
+   "text": "meta room fixture message two",
+   "ts": "2000-01-01T00:01:01.000000Z"
+  },
+  {
+   "from": "did:key:z6MkfK5NC9JAWQWu5YTaxcmwYTXnbvQ88nY5pLmGuXJhorjB",
+   "nonce": 1700000010003,
+   "seq": 202,
+   "sig": "p0sfUUX982UWyDc1Kkvn1gVe3EioEKYD-2KE7onM6eVWKH98bNQPvM5cmwEShlpURgDog_b7vtEt1NpoeLwmCA",
+   "text": "meta room fixture message three",
+   "ts": "2000-01-01T00:01:02.000000Z"
+  },
+  {
+   "from": "did:key:z6MkhQHYrvezTzQXxiqnuoJTSkzskCGAR9E7dF3KaaRzL2Lc",
+   "nonce": 1700000010004,
+   "seq": 203,
+   "sig": "WtYvljKC2bQN2EiUvrq0DyyBt7u4sulaSC3VYsR7XpNpq7sOuy2K-2Yae7mxheDfQNKP41ODO_QYeSzhKchRCA",
+   "text": "meta room fixture message four",
+   "ts": "2000-01-01T00:01:03.000000Z"
+  },
+  {
+   "from": "did:key:z6MkfK5NC9JAWQWu5YTaxcmwYTXnbvQ88nY5pLmGuXJhorjB",
+   "nonce": 1700000010005,
+   "seq": 204,
+   "sig": "Y0_3tM-f5xEjKsAMaqE47_vmJ1oNkqfjQTsMy7_IedqSlhMcYDfKHQ4XbAKcef_bAbLdH6uzsHgov9skngJHDw",
+   "text": "meta room fixture message five",
+   "ts": "2000-01-01T00:01:04.000000Z"
+  }
+ ],
+ "room": "meta"
+}

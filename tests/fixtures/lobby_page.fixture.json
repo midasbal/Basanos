@@ -1,0 +1,61 @@
+{
+ "count": 7,
+ "first_seq": 100,
+ "generation": 0,
+ "last_seq": 106,
+ "messages": [
+  {
+   "from": "did:key:z6MkfK5NC9JAWQWu5YTaxcmwYTXnbvQ88nY5pLmGuXJhorjB",
+   "nonce": 1700000000123,
+   "seq": 100,
+   "sig": "W9Gn9ZFJDHURBtpCfpVcNw7GYTq6_k6-OdCJDlh_sY4UwuVslOlHHksmJ86ZYzGz4q9jWMl_aWng4N1BJiJNCQ",
+   "text": "fixture check-in from writer one",
+   "ts": "2000-01-01T00:00:00.000000Z"
+  },
+  {
+   "from": "did:key:z6MkhQHYrvezTzQXxiqnuoJTSkzskCGAR9E7dF3KaaRzL2Lc",
+   "nonce": 1700000000456,
+   "seq": 101,
+   "sig": "ybvpxe7ssm8esKu-4lMzMdM_6B7kXbf99VBAvgXLSbwxKq4e6wH_Oj0np798aIR72adx5N_WDQQRv2KbO93tCQ",
+   "text": "fixture check-in from writer one",
+   "ts": "2000-01-01T00:00:01.000000Z"
+  },
+  {
+   "from": "did:key:z6MkfK5NC9JAWQWu5YTaxcmwYTXnbvQ88nY5pLmGuXJhorjB",
+   "nonce": 1700000000123456789,
+   "seq": 102,
+   "sig": "9X0PqUG2mR3h6AU1roVLla7Yb_pgvoewIyRoTviWVNkmWPAT_wguAwWOiDFAHrNmcGS25L0Wh25GbPptz3DOAQ",
+   "text": "fixture message with an oversized nonce",
+   "ts": "2000-01-01T00:00:02.000000Z"
+  },
+  {
+   "from": "fixture-nick-alice",
+   "seq": 103,
+   "text": "unsigned nick fixture message one",
+   "ts": "2000-01-01T00:00:03.000000Z"
+  },
+  {
+   "from": "fixture-nick-bob",
+   "seq": 104,
+   "text": "unsigned nick fixture message two",
+   "ts": "2000-01-01T00:00:04.000000Z"
+  },
+  {
+   "from": "did:key:z6MkhQHYrvezTzQXxiqnuoJTSkzskCGAR9E7dF3KaaRzL2Lc",
+   "nonce": 1700000005555,
+   "seq": 105,
+   "sig": "813jttMhUunW0wCSLfWAQ8btd2dP66_nWAYNKxEXitXYdh5JP2gRTsTFepcxpD6PWlYuITN6cOWdKEvGyGl9BA",
+   "text": "second writer wrapping up the fixture page",
+   "ts": "2000-01-01T00:00:05.000000Z"
+  },
+  {
+   "from": "did:key:z6MkfK5NC9JAWQWu5YTaxcmwYTXnbvQ88nY5pLmGuXJhorjB",
+   "nonce": 1700000006666,
+   "seq": 106,
+   "sig": "llshP5--2cOa6_NbaWcpzh_FUf6ER0zJ6_8oG_0jxUt1bOrCBmKpSxNAJ7pSN9LK070ooem47By28w5eHErHAA",
+   "text": "writer one closes out the fixture page",
+   "ts": "2000-01-01T00:00:06.000000Z"
+  }
+ ],
+ "room": "lobby"
+}

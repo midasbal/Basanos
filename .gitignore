@@ -1,0 +1,52 @@
+# Captured data -- raw records keyed to real did:key identities, plus
+# gaps/coverage/snapshots derived from them. Never belongs in git history:
+# not as bloat, not as a "frozen slice", never pinned into a public repo.
+data/
+
+# Real captured pages (the old tests/fixtures/*.real.json), kept here only
+# for the dev's own live-shape spot-checks against the actual service.
+# Same reason as data/ above: real did:key identities, never committed.
+# Committed test fixtures are tests/fixtures/*.fixture.json instead --
+# synthetic, signed by a throwaway fixture key (see make_fixtures.py).
+samples_local/
+
+# Key material. ~/.technocore-id lives outside this repo and the collector
+# never reads it, but guard the extensions everywhere regardless.
+*.pem
+*.key
+
+# Secrets / local config
+.env
+.env.*
+*token*
+*secret*
+*credentials*
+
+# Python virtualenv
+.venv/
+venv/
+
+# Python noise
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# OS / editor noise
+.DS_Store
+.idea/
+.vscode/
+
+# Local deploy artifacts: real systemd unit files and deploy scripts often
+# carry a real host/IP/path. Ignored by default; a sanitized template ships
+# later under an *.example.* / *.sample.* name, explicitly un-ignored below
+# so it can still be committed.
+*.service
+deploy.sh
+deploy_*.sh
+*.local.sh
+!*.example.*
+!*.sample.*

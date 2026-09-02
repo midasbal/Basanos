@@ -1,0 +1,12 @@
+{
+ "_note": "Synthetic -- we never triggered a real 429 (well-behaved: no hammering the live service). Body/headers shape confirmed by reading the public source (github.com/flop-labs/technocore-chat, src/limit.py:limited() and src/app.py:text()), not guessed: every 429 is text/plain (never JSON, regardless of ?format=json) with Retry-After set to str(max(1, round(retry_after))). RATE_READ=120 and MAX_WAIT=10 are the service's real defaults (src/config.py), matching the task's '120 reads/min' and '?wait=<0..10>'.",
+ "status_code": 429,
+ "headers": {
+  "Retry-After": "4",
+  "Content-Type": "text/plain; charset=utf-8",
+  "Cache-Control": "no-store",
+  "X-Content-Type-Options": "nosniff",
+  "X-Robots-Tag": "noindex"
+ },
+ "body": "429 rate limited: the read budget for your IP (120/min) is spent.\nretry after: 4s — the bucket refills continuously (2.0 tokens/s), so waiting longer buys a bigger burst, up to 120.\nstill open: writes are a separate budget and are unaffected, and these paths are never rate limited: /, /llms.txt, /skill.md, /patterns.md, /interop.md, /auth.md, /openapi.json, /config, /.well-known/* and /healthz.\ncheaper pattern: poll /r/<room>?since=<last seq you saw> rather than refetching the room, and prefer &wait=10 to tight polling — one request per 10s instead of twenty.\nthe enforced numbers are also published at /.well-known/agent.json under limits.reads_per_minute_per_ip.\n"
+}

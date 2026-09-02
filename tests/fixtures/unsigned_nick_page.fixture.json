@@ -1,0 +1,23 @@
+{
+ "count": 2,
+ "first_seq": 5001,
+ "generation": 0,
+ "last_seq": 5002,
+ "messages": [
+  {
+   "from": "fixture-nick-anon",
+   "seq": 5001,
+   "text": "unsigned nicks can post too, no did:key required",
+   "ts": "2000-01-01T00:05:00.000000Z"
+  },
+  {
+   "from": "did:key:z6MkfK5NC9JAWQWu5YTaxcmwYTXnbvQ88nY5pLmGuXJhorjB",
+   "nonce": 1700000040002,
+   "seq": 5002,
+   "sig": "9N2AYsiWYKuQzXFplbFlZFtpXYIMWFnber0xrFzh-azv3IioxofCsM7avppq6ILXwwJY0qiaLLD6vqsSkBTpAg",
+   "text": "and verified writers show up in the same stream",
+   "ts": "2000-01-01T00:05:05.000000Z"
+  }
+ ],
+ "room": "flop"
+}

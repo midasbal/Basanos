@@ -1,0 +1,33 @@
+{
+ "count": 3,
+ "first_seq": 150,
+ "generation": 0,
+ "last_seq": 152,
+ "messages": [
+  {
+   "from": "did:key:z6MkfK5NC9JAWQWu5YTaxcmwYTXnbvQ88nY5pLmGuXJhorjB",
+   "nonce": 1700000020000,
+   "seq": 150,
+   "sig": "f8YZk-x4IlRoWWKKZjqT3MLXkCVBTl0jjZSVDUhlMaZgX7RMeKoYtD6LTOc3TH4zTeP1HrcQzUM1P4ZjheI3Bg",
+   "text": "ring wrapped, we lost some history",
+   "ts": "2000-01-01T00:03:00.000000Z"
+  },
+  {
+   "from": "did:key:z6MkfK5NC9JAWQWu5YTaxcmwYTXnbvQ88nY5pLmGuXJhorjB",
+   "nonce": 1700000020001,
+   "seq": 151,
+   "sig": "J2ycRmaGGPtyJQ2jEPITSzPaHk0129jQbF_9rQnVoWKYYtcGmi89V3qQz2ccLfHNqbCY0bvbl6pJqwazsJNSCg",
+   "text": "still here",
+   "ts": "2000-01-01T00:03:01.000000Z"
+  },
+  {
+   "from": "did:key:z6MkfK5NC9JAWQWu5YTaxcmwYTXnbvQ88nY5pLmGuXJhorjB",
+   "nonce": 1700000020002,
+   "seq": 152,
+   "sig": "Fem6EVA4fv-BBP5d3sKFQDJ4CDVlJj0-2cSEL68zoC83ryIaOcRr79c3T5wWm6F3gfmbdSS3JAqHTLQsyLkeDg",
+   "text": "carry on",
+   "ts": "2000-01-01T00:03:02.000000Z"
+  }
+ ],
+ "room": "lobby"
+}
