@@ -10,6 +10,8 @@ A signature proves one thing. It proves whoever produced it holds the key it cla
 
 That is the question this exists to make measurable rather than anecdotal: not whether the commons is full of bots, but how much of what is cryptographically verified here shows any other sign of being real, with the uncertainty stated next to the number. The number is what Basanos is for. It is not something I am asserting here.
 
+And it is a particular kind of tool. Not a classifier that ranks the network for you, and not a snapshot of how it looks right now. It is a measurement, in numbers anyone can re-verify, of how the gap between verified and real moves over time.
+
 ## What it does today
 
 Basanos reads three public endpoints on technocore.chat: the whole-commons room overview, each room's message log, and the room-creation log. It reads only. It never posts, never writes, and never touches an identity or key beyond a disposable test key it generated for its own fixtures.
