@@ -28,6 +28,24 @@ headline bucket width defaults to 10 seconds and is never made finer than
 that: bucketing below the noise floor would just measure ingestion jitter,
 not posting behavior.
 
+THREE NULL MODELS, not one: a template's posts are compared against three
+increasingly rigorous baselines, because the lobby's own activity is not
+flat -- it swings noticeably over a window -- so a template that merely
+tracks overall room activity would read bursty against a naive uniform
+null even though it is only following the crowd.
+
+- uniform: every 10s bucket equally likely. The naive baseline, kept only
+  to show how much the room-weighting below corrects it.
+- room: this template's posts compared against a null weighted by the
+  ROOM'S OWN per-bucket activity (every re-verified signed post in the
+  room, not just this template's), over the same bucket range. A template
+  that merely rides the room's rhythm reads near 1 here.
+- room-minus-self: the same room-weighted null, but with this template's
+  own posts subtracted out of the weights first, so a template is never
+  compared against a baseline partly built from itself. This is the
+  HEADLINE: a template only indicates timing coordination beyond the room
+  if it is elevated here, not just against uniform or room.
+
 Deliberately out of scope for v1 (later tiers): a full key-linkage graph
 or connected-components analysis, near-duplicate/template-variant merging,
 and any per-identity output. Exact text match only, and never a report of
@@ -40,6 +58,7 @@ Usage:
 """
 
 import argparse
+import hashlib
 import json
 import os
 import random
@@ -122,34 +141,18 @@ def _index_of_dispersion(bucket_counts_all, bucket_count):
     return variance / mean
 
 
-def _expected_dispersion_analytic(bucket_count):
-    """Closed-form large-sample expectation of the index of dispersion for
-    `post_count` posts scattered uniformly at random across `bucket_count`
-    buckets: approximately (1 - 1/bucket_count), independent of post_count.
-    Approaches 1 as bucket_count grows. None when undefined (fewer than 2
-    buckets, same condition `_index_of_dispersion` uses).
-    """
-    if bucket_count < 2:
-        return None
-    return 1.0 - (1.0 / bucket_count)
+def _expected_dispersion_uniform(post_count, bucket_count):
+    """The index of dispersion a UNIFORM-random null model would produce:
+    `post_count` posts scattered independently and uniformly at random
+    across `bucket_count` buckets (every bucket equally likely), averaged
+    over NULL_MODEL_TRIALS trials of the identical `_index_of_dispersion`
+    measurement. The naive baseline -- kept only so the room-weighted
+    nulls below can show how much they correct it, never the headline.
 
-
-def _expected_dispersion_simulated(post_count, bucket_count):
-    """The index of dispersion a uniformly-random null model would
-    actually produce at this specific, possibly small, post_count: `post_count`
-    posts scattered independently and uniformly at random across
-    `bucket_count` buckets, averaged over NULL_MODEL_TRIALS trials of the
-    identical `_index_of_dispersion` measurement.
-
-    The analytic (1 - 1/bucket_count) figure above is a large-sample
-    approximation; at small post_count (exactly the regime a handful of
-    signing keys produces) the finite-sample expectation can differ
-    meaningfully, so this simulated value, not the analytic one, is what
-    `dispersion_ratio` divides by. Seeded deterministically from
-    (post_count, bucket_count) alone, the same scheme and same
-    NULL_MODEL_TRIALS as before -- no OS randomness, no wall clock, so the
-    same template shape always reproduces the exact same expectation, run
-    to run, machine to machine.
+    Seeded deterministically from (post_count, bucket_count) alone -- no
+    OS randomness, no wall clock -- so the same template shape always
+    reproduces the exact same expectation, run to run, machine to machine.
+    None when undefined (fewer than 2 buckets).
     """
     if bucket_count < 2:
         return None
@@ -164,44 +167,131 @@ def _expected_dispersion_simulated(post_count, bucket_count):
     return total / NULL_MODEL_TRIALS
 
 
-def compute_template_synchrony(ts_values, bucket_seconds):
+def _weighted_null_seed(post_count, weights):
+    """A deterministic seed derived from `post_count` and a hash of the
+    exact weight vector -- not just post_count and bucket_count, since two
+    templates that happen to share both but sit against differently-shaped
+    room activity must not share a null draw. `weights` are always
+    non-negative integers (post counts or their differences) here, so
+    `repr(tuple(weights))` is an exact, stable string to hash -- no
+    floating-point formatting instability. No OS randomness, no wall
+    clock: the same (post_count, weights) pair always reproduces the same
+    seed, run to run, machine to machine.
+    """
+    digest = hashlib.sha256(repr(tuple(weights)).encode("utf-8")).hexdigest()
+    return post_count * 1_000_003 + int(digest[:15], 16)
+
+
+def _expected_dispersion_weighted(post_count, weights):
+    """The index of dispersion a WEIGHTED-random null model would produce:
+    `post_count` posts scattered independently at random across
+    `len(weights)` buckets, each post landing in bucket i with probability
+    proportional to `weights[i]` (a weighted categorical draw, not a
+    uniform one), averaged over NULL_MODEL_TRIALS trials of the identical
+    `_index_of_dispersion` measurement.
+
+    Used for both the whole-room null (weights = the room's own per-bucket
+    activity over this template's active span) and the room-minus-self
+    null (weights = that same room activity with this template's own
+    posts subtracted out, bucket by bucket) -- the only difference between
+    the two calls is which weight vector is passed in.
+
+    Returns None when undefined: fewer than 2 buckets, or every weight is
+    0 -- nothing to weight toward. For the minus-self null specifically,
+    an all-zero vector means this template's own posts account for ALL
+    re-verified signed activity across its own active span, so there is
+    no "rest of the room" left to compare against; the caller reports that
+    ratio as None rather than dividing by a baseline that doesn't exist.
+
+    Seeded via `_weighted_null_seed`, deterministic in (post_count,
+    weights) alone -- no OS randomness, no wall clock.
+    """
+    bucket_count = len(weights)
+    if bucket_count < 2:
+        return None
+    if sum(weights) <= 0:
+        return None
+    rng = random.Random(_weighted_null_seed(post_count, weights))
+    total = 0.0
+    for _ in range(NULL_MODEL_TRIALS):
+        draws = rng.choices(range(bucket_count), weights=weights, k=post_count)
+        bucket_counts_all = [0] * bucket_count
+        for b in draws:
+            bucket_counts_all[b] += 1
+        total += _index_of_dispersion(bucket_counts_all, bucket_count)
+    return total / NULL_MODEL_TRIALS
+
+
+def compute_template_synchrony(ts_values, bucket_seconds, window_earliest, room_bucket_counts, global_bucket_count):
     """The per-template timing-synchrony numbers for one shared template's
     re-verified posts.
 
     `ts_values`: a non-empty list of epoch-second floats (one per
-    re-verified post carrying that template's text). Returns a dict with
-    the active span, bucketing, the observed index of dispersion of posts
-    across ALL buckets (including empty ones), both the analytic and
-    simulated null-model expectations for the same shape, their ratio
-    (the headline: `dispersion_ratio`), and a plain descriptive secondary
-    stat, `busiest_bucket_fraction`.
+    re-verified post carrying that template's text). `window_earliest`,
+    `room_bucket_counts` (the room-wide re-verified-signed-post count per
+    10s bucket across the WHOLE window, built once per call to
+    `compute_synchrony_stats`), and `global_bucket_count` anchor this
+    template's own bucketing to the exact same grid the room curve uses.
 
-    `dispersion_ratio` >> 1 is bursty (coordination-consistent); ~1 is
-    random-consistent; < 1 is MORE even than random, i.e.
-    metronomic/heartbeat-consistent -- unlike a single-busiest-bucket
-    measure alone, this also catches perfectly-even posting, which reads
-    near or below the busiest-bucket floor exactly the same way random
-    posting can.
+    IMPORTANT: this template's own bucket range (its active span, from its
+    earliest to its latest post) is computed as a SLICE of indices into
+    that same global grid, and the room-weighted nulls below are built
+    from the identical slice of `room_bucket_counts` -- observed and
+    expected are always measured over the same bucket set, never a
+    template-local grid compared against a differently-anchored room
+    grid, or the ratio between them would be meaningless.
+
+    Returns a dict with the active span, bucketing, the observed index of
+    dispersion across ALL buckets in that span (including empty ones),
+    three null-model expectations for the same shape (uniform, room, and
+    room-minus-self) and their three ratios, and a plain descriptive
+    secondary stat, `busiest_bucket_fraction`.
+
+    The HEADLINE is `dispersion_ratio_room_minus_self`: only an elevation
+    there indicates timing coordination beyond the room's own rhythm.
+    `dispersion_ratio_uniform` and `dispersion_ratio_room` are kept
+    alongside it -- a template can read high on uniform (or even on room)
+    and still read near 1 on room-minus-self, which means it merely
+    tracks the room's own activity rather than showing extra coordination.
     """
     post_count = len(ts_values)
     earliest = min(ts_values)
     latest = max(ts_values)
     active_span = latest - earliest
 
-    bucket_count = int(active_span // bucket_seconds) + 1
+    def _global_bucket(ts):
+        idx = int((ts - window_earliest) // bucket_seconds)
+        return max(0, min(idx, global_bucket_count - 1))
+
+    start_bucket = min(_global_bucket(ts) for ts in ts_values)
+    end_bucket = max(_global_bucket(ts) for ts in ts_values)
+    bucket_count = end_bucket - start_bucket + 1
 
     bucket_counts_all = [0] * bucket_count
-    for t in ts_values:
-        idx = int((t - earliest) // bucket_seconds)
-        bucket_counts_all[idx] += 1
+    for ts in ts_values:
+        bucket_counts_all[_global_bucket(ts) - start_bucket] += 1
+
+    # The template's own bucket range, sliced out of the room-wide curve on
+    # the identical global grid -- this is what makes the room-weighted
+    # nulls below comparable to the observed dispersion at all.
+    room_slice = room_bucket_counts[start_bucket : end_bucket + 1]
+    minus_self_weights = [
+        max(0, room_count - own_count) for room_count, own_count in zip(room_slice, bucket_counts_all)
+    ]
 
     observed_dispersion = _index_of_dispersion(bucket_counts_all, bucket_count)
-    expected_analytic = _expected_dispersion_analytic(bucket_count)
-    expected_simulated = _expected_dispersion_simulated(post_count, bucket_count)
-    if observed_dispersion is not None and expected_simulated:
-        dispersion_ratio = observed_dispersion / expected_simulated
-    else:
-        dispersion_ratio = None
+    expected_uniform = _expected_dispersion_uniform(post_count, bucket_count)
+    expected_room = _expected_dispersion_weighted(post_count, room_slice)
+    expected_room_minus_self = _expected_dispersion_weighted(post_count, minus_self_weights)
+
+    def _ratio(expected):
+        if observed_dispersion is not None and expected:
+            return observed_dispersion / expected
+        return None
+
+    dispersion_ratio_uniform = _ratio(expected_uniform)
+    dispersion_ratio_room = _ratio(expected_room)
+    dispersion_ratio_room_minus_self = _ratio(expected_room_minus_self)
 
     busiest_bucket_fraction = max(bucket_counts_all) / post_count
 
@@ -211,9 +301,12 @@ def compute_template_synchrony(ts_values, bucket_seconds):
         "bucket_count": bucket_count,
         "occupied_bucket_count": sum(1 for c in bucket_counts_all if c > 0),
         "observed_dispersion": observed_dispersion,
-        "expected_dispersion_analytic": expected_analytic,
-        "expected_dispersion_simulated": expected_simulated,
-        "dispersion_ratio": dispersion_ratio,
+        "expected_dispersion_uniform": expected_uniform,
+        "expected_dispersion_room": expected_room,
+        "expected_dispersion_room_minus_self": expected_room_minus_self,
+        "dispersion_ratio_uniform": dispersion_ratio_uniform,
+        "dispersion_ratio_room": dispersion_ratio_room,
+        "dispersion_ratio_room_minus_self": dispersion_ratio_room_minus_self,
         "busiest_bucket_fraction": busiest_bucket_fraction,
     }
 
@@ -238,6 +331,9 @@ def compute_synchrony_stats(data_dir, room="lobby", top_n=DEFAULT_TOP_N, bucket_
     text_to_dids = {}
     # text -> list of epoch-second floats, one per re-verified post (re-verified only)
     text_to_ts = {}
+    # every re-verified signed post's ts, any text -- builds the room-wide
+    # activity curve the weighted nulls are measured against
+    all_ts = []
 
     found = os.path.exists(messages_path)
     if found:
@@ -264,6 +360,25 @@ def compute_synchrony_stats(data_dir, room="lobby", top_n=DEFAULT_TOP_N, bucket_
                 ts_unparsable += 1
             else:
                 text_to_ts.setdefault(text, []).append(parsed_ts)
+                all_ts.append(parsed_ts)
+
+    # The room-wide activity curve: every re-verified signed post (any
+    # text), binned on one grid anchored at the window's own earliest ts.
+    # Each top-N template's own bucketing below is a slice of THIS exact
+    # grid, never a separately-anchored one -- see compute_template_synchrony.
+    if all_ts:
+        window_earliest = min(all_ts)
+        window_latest = max(all_ts)
+        global_bucket_count = int((window_latest - window_earliest) // bucket_seconds) + 1
+        room_bucket_counts = [0] * global_bucket_count
+        for ts in all_ts:
+            idx = int((ts - window_earliest) // bucket_seconds)
+            idx = max(0, min(idx, global_bucket_count - 1))
+            room_bucket_counts[idx] += 1
+    else:
+        window_earliest = None
+        global_bucket_count = 0
+        room_bucket_counts = []
 
     # A "shared template": exact text signed by >= 2 distinct DIDs, ranked by
     # distinct-key count -- the same population and ordering coordination.py
@@ -273,23 +388,37 @@ def compute_synchrony_stats(data_dir, room="lobby", top_n=DEFAULT_TOP_N, bucket_
     top_n_templates = ranked_templates[:top_n]
 
     template_reports = []
-    ratios = []
+    ratios_uniform = []
+    ratios_room = []
+    ratios_room_minus_self = []
     for t in top_n_templates:
         ts_values = text_to_ts.get(t, [])
         if not ts_values:
             continue  # no parseable timestamp for any post of this template
-        synchrony = compute_template_synchrony(ts_values, bucket_seconds)
+        synchrony = compute_template_synchrony(
+            ts_values, bucket_seconds, window_earliest, room_bucket_counts, global_bucket_count
+        )
         template_reports.append({"text": t, "distinct_keys": len(text_to_dids[t]), **synchrony})
-        # dispersion_ratio is None only when a template's own active span
-        # is too short to have more than one bucket -- excluded from the
-        # aggregate rather than treated as 0 or skewing the count.
-        if synchrony["dispersion_ratio"] is not None:
-            ratios.append(synchrony["dispersion_ratio"])
+        # A None ratio (span too short for a second bucket, or an all-zero
+        # minus-self weight vector) is excluded from its aggregate rather
+        # than treated as 0 or skewing the count.
+        if synchrony["dispersion_ratio_uniform"] is not None:
+            ratios_uniform.append(synchrony["dispersion_ratio_uniform"])
+        if synchrony["dispersion_ratio_room"] is not None:
+            ratios_room.append(synchrony["dispersion_ratio_room"])
+        if synchrony["dispersion_ratio_room_minus_self"] is not None:
+            ratios_room_minus_self.append(synchrony["dispersion_ratio_room_minus_self"])
 
-    median_ratio = statistics.median(ratios) if ratios else None
-    max_ratio = max(ratios) if ratios else None
+    def _median_max(values):
+        return (statistics.median(values), max(values)) if values else (None, None)
+
+    median_ratio_uniform, max_ratio_uniform = _median_max(ratios_uniform)
+    median_ratio_room, max_ratio_room = _median_max(ratios_room)
+    median_ratio_room_minus_self, max_ratio_room_minus_self = _median_max(ratios_room_minus_self)
+
     ratio_threshold_counts = {
-        str(threshold): sum(1 for r in ratios if r > threshold) for threshold in RATIO_THRESHOLDS
+        str(threshold): sum(1 for r in ratios_room_minus_self if r > threshold)
+        for threshold in RATIO_THRESHOLDS
     }
 
     coverage = CoverageTracker(data_dir).counters(room)
@@ -310,8 +439,12 @@ def compute_synchrony_stats(data_dir, room="lobby", top_n=DEFAULT_TOP_N, bucket_
         "ts_unparsable_skipped": ts_unparsable,
         "distinct_shared_templates": len(shared_templates),
         "templates": template_reports,
-        "median_dispersion_ratio": median_ratio,
-        "max_dispersion_ratio": max_ratio,
+        "median_dispersion_ratio_uniform": median_ratio_uniform,
+        "max_dispersion_ratio_uniform": max_ratio_uniform,
+        "median_dispersion_ratio_room": median_ratio_room,
+        "max_dispersion_ratio_room": max_ratio_room,
+        "median_dispersion_ratio_room_minus_self": median_ratio_room_minus_self,
+        "max_dispersion_ratio_room_minus_self": max_ratio_room_minus_self,
         "ratio_threshold_counts": ratio_threshold_counts,
         "coverage_captured_total": coverage.get("captured_total", 0),
         "coverage_dropped_total": coverage.get("dropped_total", 0),
@@ -327,11 +460,14 @@ def format_report(stats):
     `ts`, which has roughly 10 seconds of confirmed benign local
     reordering between adjacent posts (why the bucket width defaults to
     10 seconds and is never made finer), and is measured only at the
-    coverage ratio captured below. A dispersion ratio much greater than 1
-    is evidence of coordinated timing, consistent with a shared scheduler;
-    a ratio near 1 is consistent with independent random-timed posting;
-    a ratio below 1 is MORE even than random, consistent with metronomic
-    heartbeat posting. Either way this is a statement about the timing
+    coverage ratio captured below. The HEADLINE is the room-minus-self
+    ratio: much greater than 1 there is evidence of coordinated timing
+    beyond the room's own rhythm; near 1 is consistent with the template
+    simply following the room, or with independent random-timed posting;
+    below 1 is MORE even than either, consistent with metronomic
+    heartbeat posting. A template that reads high on uniform or room but
+    near 1 on room-minus-self is not bursty, it is only tracking the
+    room's own activity. Either way this is a statement about the timing
     SHAPE of the traffic, never a verdict about any poster, and no
     individual DID is ever named.
     """
@@ -376,6 +512,9 @@ def format_report(stats):
     )
     lines.append("")
 
+    def _ratio_str(ratio):
+        return f"{ratio:.2f}x" if ratio is not None else "n/a"
+
     lines.append(f"Per-template timing (top-{top_n} shared templates by distinct-key count):")
     if not stats["templates"]:
         lines.append("  (none -- no shared template had a parseable timestamp)")
@@ -387,13 +526,11 @@ def format_report(stats):
                 f"{entry['active_span_seconds']:.1f}s, buckets: {entry['bucket_count']} "
                 f"({entry['occupied_bucket_count']} occupied)"
             )
-            ratio = entry["dispersion_ratio"]
-            ratio_str = f"{ratio:.2f}x" if ratio is not None else "n/a (span too short for a second bucket)"
+            lines.append(f"    observed dispersion: {entry['observed_dispersion']:.3f}")
             lines.append(
-                f"    observed dispersion: {entry['observed_dispersion']:.3f}, "
-                f"expected (simulated null model): {entry['expected_dispersion_simulated']:.3f}, "
-                f"expected (analytic, large-sample): {entry['expected_dispersion_analytic']:.3f}, "
-                f"dispersion ratio: {ratio_str}"
+                f"    dispersion ratio -- uniform (naive): {_ratio_str(entry['dispersion_ratio_uniform'])}, "
+                f"room: {_ratio_str(entry['dispersion_ratio_room'])}, "
+                f"room-minus-self (HEADLINE): {_ratio_str(entry['dispersion_ratio_room_minus_self'])}"
             )
             lines.append(
                 f"    fraction of posts in the single busiest {bucket_seconds:g}s window: "
@@ -402,18 +539,30 @@ def format_report(stats):
     lines.append("")
 
     lines.append("Aggregate across the top-N templates:")
-    median_ratio = stats["median_dispersion_ratio"]
-    max_ratio = stats["max_dispersion_ratio"]
-    if median_ratio is None:
+    median_headline = stats["median_dispersion_ratio_room_minus_self"]
+    max_headline = stats["max_dispersion_ratio_room_minus_self"]
+    if median_headline is None:
         lines.append("  no templates measured -- no aggregate to report.")
     else:
-        lines.append(f"  median dispersion ratio: {median_ratio:.2f}x")
-        lines.append(f"  max dispersion ratio:    {max_ratio:.2f}x")
+        lines.append(
+            f"  median dispersion ratio, room-minus-self (HEADLINE): {median_headline:.2f}x "
+            f"(max: {max_headline:.2f}x)"
+        )
+        lines.append(
+            f"  median dispersion ratio, room:    "
+            f"{_ratio_str(stats['median_dispersion_ratio_room'])} "
+            f"(max: {_ratio_str(stats['max_dispersion_ratio_room'])})"
+        )
+        lines.append(
+            f"  median dispersion ratio, uniform (naive): "
+            f"{_ratio_str(stats['median_dispersion_ratio_uniform'])} "
+            f"(max: {_ratio_str(stats['max_dispersion_ratio_uniform'])})"
+        )
         for threshold in RATIO_THRESHOLDS:
             count = stats["ratio_threshold_counts"][str(threshold)]
             lines.append(
-                f"  {count} of {len(stats['templates'])} top templates have a dispersion "
-                f"ratio above {threshold:g}x"
+                f"  {count} of {len(stats['templates'])} top templates have a room-minus-self "
+                f"dispersion ratio above {threshold:g}x"
             )
     lines.append("")
 
@@ -422,12 +571,19 @@ def format_report(stats):
         "the bucket-width note above) and is measured only at the coverage ratio stated above."
     )
     lines.append(
-        "The dispersion ratio is the headline: much greater than 1 is bursty, evidence of "
-        "coordinated timing consistent with a shared scheduler; near 1 is consistent with "
-        "independent random-timed posting; below 1 is more even than random, consistent "
-        "with metronomic heartbeat posting. The busiest-bucket fraction above is a plain "
-        "descriptive secondary number, not a null-model comparison. Either way this is a "
-        "statement about the timing shape of the traffic, not a verdict about any poster."
+        "Three null models, in increasing rigor: uniform (every bucket equally likely, the "
+        "naive baseline), room (weighted by the room's own per-bucket activity, so a "
+        "template that merely rides the crowd reads near 1), and room-minus-self (the same "
+        "room weighting with this template's own posts subtracted out first, so it is never "
+        "compared against a baseline partly built from itself). The room-minus-self ratio is "
+        "the HEADLINE: only an elevation there indicates timing coordination beyond the "
+        "room's own rhythm. If room and room-minus-self agree, the finding is robust; a "
+        "template that reads high on uniform or room but near 1 on room-minus-self is not "
+        "bursty, it is only tracking the room. Below 1 on room-minus-self is more even than "
+        "even the room's own rhythm, consistent with metronomic heartbeat posting. The "
+        "busiest-bucket fraction above is a plain descriptive secondary number, not a "
+        "null-model comparison. Either way this is a statement about the timing shape of "
+        "the traffic, not a verdict about any poster."
     )
     lines.append("")
     lines.append(f"Caveat: {CAVEAT}")
