@@ -298,6 +298,17 @@ class TechnocoreClient:
                 self._sleep(min(backoff, effective_backoff_cap))
                 backoff *= 2
                 continue
+            except requests.exceptions.RequestException as exc:
+                attempts_transient += 1
+                if attempts_transient > max_transient_retries:
+                    raise TransientFetchError(
+                        f"GET {url} failed after {attempts_transient} attempts "
+                        f"(connection error/timeout reading response body): {exc}",
+                        cause=exc,
+                    ) from exc
+                self._sleep(min(backoff, effective_backoff_cap))
+                backoff *= 2
+                continue
             finally:
                 resp.close()
 

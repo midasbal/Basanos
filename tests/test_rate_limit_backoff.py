@@ -52,7 +52,15 @@ class _FakeResponse:
     .raise_for_status() directly (see _read_bounded_body in http_client.py).
     """
 
-    def __init__(self, status_code, text_body="", headers=None, json_body=None, body_bytes=None):
+    def __init__(
+        self,
+        status_code,
+        text_body="",
+        headers=None,
+        json_body=None,
+        body_bytes=None,
+        iter_content_error=None,
+    ):
         self.status_code = status_code
         self.headers = headers or {}
         if body_bytes is not None:
@@ -61,9 +69,16 @@ class _FakeResponse:
             self._body_bytes = json.dumps(json_body).encode("utf-8")
         else:
             self._body_bytes = text_body.encode("utf-8")
+        # When set, iter_content() raises this instead of yielding a body --
+        # simulates a connection dropping (or timing out) mid-body-read,
+        # as opposed to session.get() itself failing before a response ever
+        # comes back.
+        self._iter_content_error = iter_content_error
         self.closed = False
 
     def iter_content(self, chunk_size=65536):
+        if self._iter_content_error is not None:
+            raise self._iter_content_error
         for i in range(0, len(self._body_bytes), chunk_size):
             yield self._body_bytes[i : i + chunk_size]
 
@@ -241,3 +256,61 @@ def test_client_429_and_transient_retries_are_independent_counters():
     assert result == ok_body
     assert sleeps == [4.0, 1.0]
     assert len(session.requests) == 3
+
+
+# --- transient failures during the body read itself (not session.get) ----
+#
+# Regression: session.get() succeeding but the body read then raising
+# requests.exceptions.ConnectionError (a connection dropping, or timing
+# out, mid-stream) used to escape _get() as a raw, uncaught exception --
+# the retry loop's body-read stage only caught ReadDeadlineExceeded, never
+# a plain RequestException. That crashed the collector process in
+# production (revived only by systemd's restart). These two tests inject
+# the failure at iter_content() specifically, the path the earlier tests
+# above never exercised.
+
+
+def test_client_retries_a_connection_error_during_body_read_then_succeeds():
+    ok_body = {"rooms": [], "total": 0}
+    session = _FakeSession(
+        [
+            _FakeResponse(
+                200,
+                iter_content_error=requests.exceptions.ConnectionError(
+                    "connection dropped mid-body"
+                ),
+            ),
+            _FakeResponse(200, json_body=ok_body),
+        ]
+    )
+    client, sleeps = _client(session, transient_backoff_base=1.0, transient_backoff_cap=30.0)
+
+    result = client.get_rooms_overview()
+
+    assert result == ok_body
+    assert len(session.requests) == 2  # a fresh session.get() was reissued on retry
+    assert sleeps == [1.0]  # one transient retry was actually consumed
+
+
+def test_client_gives_up_after_persistent_connection_errors_during_body_read():
+    session = _FakeSession(
+        [
+            _FakeResponse(
+                200,
+                iter_content_error=requests.exceptions.ConnectionError(
+                    "connection dropped mid-body"
+                ),
+            )
+        ]
+        * 10  # never succeeds
+    )
+    client, sleeps = _client(session, max_transient_retries=3, transient_backoff_base=0.01)
+
+    with pytest.raises(TransientFetchError) as exc_info:
+        client.get_rooms_overview()
+
+    # The exact regression: a raw requests exception must never escape --
+    # only the wrapping TransientFetchError should.
+    assert not isinstance(exc_info.value, requests.exceptions.RequestException)
+    assert len(session.requests) == 4  # 1 initial + 3 retries, same budget as any other transient path
+    assert len(sleeps) == 3
