@@ -44,6 +44,32 @@ What this supports, and what it does not. Byte-identical text shared across thou
 
 One structural detail holds up cleanly in window B and is worth stating because it complicates any single story. Among the top five templates, the largest, signed by 14,294 keys, shares almost no keys with the other four: its pairwise overlap with each of them is essentially zero. The other four overlap heavily with each other, sharing well over half their key sets pairwise. So the duplication is not one undifferentiated mass. There are at least two distinct populations in it, one cycling a set of mutually-overlapping lines and another posting a single line and little else.
 
+## Measurement 3: activity over time, and whether the duplication is timed
+
+The first two measurements are about content: the same text signed by many keys. This one is about time: when those posts arrive. It has two parts, an activity curve and a timing test, and the second depends on the first.
+
+All figures here are from window B, the 2,463,428 re-verified signed messages spanning about 32 hours, at 88.2 percent coverage.
+
+### The commons does not sleep
+
+Binning re-verified signed posts by their server timestamp into one-hour bins across the window gives the lobby's activity curve. Because the collector loses more to ring eviction when traffic is heaviest, the raw captured count understates the busy hours, so the honest curve is captured posts plus the collector's own recorded eviction count, its best estimate of true throughput, with per-hour coverage stated between the two.
+
+Across the whole window the estimated throughput never falls below roughly 65,000 posts an hour. There is no nightly collapse toward quiet, no trough that a population living on human waking hours would produce. The busiest hours run to about 160,000, so the curve swings by roughly two and a half times, but its floor stays high around the clock. The swing is also not a smooth daily rise and fall: it has sharp peaks, one in the evening of the first day and a cluster across the second morning, more consistent with automated activity responding to something than with people waking and sleeping.
+
+This is a single window of about a day, so it is an activity curve, not yet a confirmed daily cycle: distinguishing a repeating pattern from one quiet stretch needs several continuous days, which continued collection will provide. But within this window, the shape points away from a human rhythm.
+
+### Whether the duplicated templates are timed together, or just ride the room
+
+If thousands of keys post the same line, do those posts cluster in time, which would suggest a shared scheduler, or spread out the way independent posting would? The measure is the index of dispersion of each template's posts across ten-second buckets: near one is spread like random, well above one is clustered, below one is more even than random.
+
+The trap is that the room itself is not flat, it swings two and a half times, so a template that simply posts more when the room is busy will look clustered even with no coordination of its own. To separate the two, each template's clustering is compared against three baselines: a naive uniform one, one weighted by the room's own activity, and one weighted by all other traffic with the template's own posts removed, so it is never measured against a baseline built partly from itself. The last is the honest one.
+
+Against the naive baseline the fifteen most-duplicated templates look clustered, at roughly twice random. Against the room's own rhythm that mostly dissolves: their clustering drops to about 1.2 times, meaning most of the apparent timing structure was simply these templates riding the room's activity swing, not coordinating with each other. Some slight excess clustering remains, but it is modest, and the text duplication those templates show is not matched by tight timing.
+
+Two smaller templates are the exception. They stay clustered at three to four times even against the all-other-traffic baseline, so their posts really do bunch in time beyond anything the room's rhythm explains. These are the same two that stood apart structurally in the second measurement, which is a small independent corroboration that they behave differently from the rest.
+
+So on the timing axis the coordination story is weaker than the content axis: most of the heavily-duplicated traffic posts roughly when the room posts, with a specific pair of templates as the exception. The strong, unambiguous finding across all three measurements is the content one, that thousands of verified keys post byte-identical text. Whether that text is also released on a shared clock is, for most of it, not supported here.
+
 ## What is not claimed
 
 The persistence question is open. Whether the gap between verified and real is growing, shrinking, or steady over time is the question Basanos exists to answer, and it is not answered here. The two windows are not comparable as a time series, so nothing about the direction of change can be read from them. Answering it needs windows captured continuously across a known span, which is what the next measurements and continued collection are for. Timing and diurnal structure are the first cut at it.
