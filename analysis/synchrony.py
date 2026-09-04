@@ -59,6 +59,7 @@ Usage:
 
 import argparse
 import hashlib
+import itertools
 import json
 import os
 import random
@@ -205,6 +206,20 @@ def _expected_dispersion_weighted(post_count, weights):
 
     Seeded via `_weighted_null_seed`, deterministic in (post_count,
     weights) alone -- no OS randomness, no wall clock.
+
+    `cum_weights` is computed once, before the trial loop, rather than
+    passed as `weights=` on every call to `rng.choices`. Per CPython's own
+    `random.Random.choices` source, when `weights=` is given it does
+    exactly `cum_weights = list(_accumulate(weights))` internally, on
+    every single call, even though that result is invariant across all
+    NULL_MODEL_TRIALS trials of this function (the weight vector never
+    changes within a call). Passing an equivalent, pre-computed
+    `cum_weights=` instead is not a reformulation of the sampling, it is
+    the identical computation `choices` already does, just hoisted out of
+    the loop: same cumulative float values, and the same number and order
+    of `rng.random()` calls consumed per trial (`k=post_count`, unchanged),
+    so the entire random stream, and therefore every simulated dispersion
+    value, is bit-identical to before this hoist.
     """
     bucket_count = len(weights)
     if bucket_count < 2:
@@ -212,9 +227,10 @@ def _expected_dispersion_weighted(post_count, weights):
     if sum(weights) <= 0:
         return None
     rng = random.Random(_weighted_null_seed(post_count, weights))
+    cum_weights = list(itertools.accumulate(weights))
     total = 0.0
     for _ in range(NULL_MODEL_TRIALS):
-        draws = rng.choices(range(bucket_count), weights=weights, k=post_count)
+        draws = rng.choices(range(bucket_count), cum_weights=cum_weights, k=post_count)
         bucket_counts_all = [0] * bucket_count
         for b in draws:
             bucket_counts_all[b] += 1
@@ -263,13 +279,19 @@ def compute_template_synchrony(ts_values, bucket_seconds, window_earliest, room_
         idx = int((ts - window_earliest) // bucket_seconds)
         return max(0, min(idx, global_bucket_count - 1))
 
-    start_bucket = min(_global_bucket(ts) for ts in ts_values)
-    end_bucket = max(_global_bucket(ts) for ts in ts_values)
+    # Computed once per post here and reused below, rather than once each
+    # in min(), max(), and the fill loop (three evaluations of the same
+    # arithmetic per post). Pure common-subexpression elimination: the
+    # values themselves, and therefore start_bucket, end_bucket, and
+    # bucket_counts_all, are unchanged.
+    global_indices = [_global_bucket(ts) for ts in ts_values]
+    start_bucket = min(global_indices)
+    end_bucket = max(global_indices)
     bucket_count = end_bucket - start_bucket + 1
 
     bucket_counts_all = [0] * bucket_count
-    for ts in ts_values:
-        bucket_counts_all[_global_bucket(ts) - start_bucket] += 1
+    for idx in global_indices:
+        bucket_counts_all[idx - start_bucket] += 1
 
     # The template's own bucket range, sliced out of the room-wide curve on
     # the identical global grid -- this is what makes the room-weighted
