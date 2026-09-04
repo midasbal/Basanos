@@ -148,7 +148,7 @@ def main(argv=None):
     collector = Collector(client, config)
 
     if args.once:
-        results = collector.run_once(wait=0)
+        results = collector.run_once(wait=config.long_poll_wait)
         snap = results["snapshot"]
         snap_summary = "snapshot failed" if snap["failed"] else "snapshot captured"
 

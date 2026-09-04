@@ -4,7 +4,7 @@ from typing import List, Optional
 DEFAULT_BASE_URL = "https://technocore.chat"
 DEFAULT_ROOMS = ("lobby",)
 DEFAULT_DATA_DIR = "data"
-DEFAULT_LONG_POLL_WAIT = 10
+DEFAULT_LONG_POLL_WAIT = 0
 DEFAULT_USER_AGENT = "basanos-collector/0.1 (+read-only measurement collector)"
 
 # Two independent cadences (increment 3), replacing the single shared
@@ -115,11 +115,16 @@ class Config:
     message_backoff_cap: float = DEFAULT_MESSAGE_BACKOFF_CAP
     rooms: List[str] = field(default_factory=lambda: list(DEFAULT_ROOMS))
     data_dir: str = DEFAULT_DATA_DIR
-    # Also unused by run_loop as of increment 3: message-cadence drains now
+    # Unused by run_loop as of increment 3: message-cadence drains now
     # fetch with wait=0 always (the fixed message_interval is the pacing
-    # mechanism, not server-side long-poll). Kept for run_once callers that
-    # still want to pass an explicit wait, and for backward-compat
-    # construction.
+    # mechanism, not server-side long-poll). cli.py's --once path passes
+    # this straight into Collector.run_once(wait=...), so --long-poll-wait
+    # controls the server-side long-poll on the first page of that one-shot
+    # pass. Default is 0 (no long-poll), matching --once's own long-standing
+    # default of an immediate, non-blocking pass -- this field was
+    # previously accepted but silently never read by --once, so the
+    # default here is chosen to match that already-observed behavior,
+    # not to change it.
     long_poll_wait: int = DEFAULT_LONG_POLL_WAIT
     user_agent: str = DEFAULT_USER_AGENT
     # Deprecated (increment 3): run_loop used one shared interval for both
