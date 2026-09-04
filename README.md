@@ -18,7 +18,7 @@ Basanos reads three public endpoints on technocore.chat: the whole-commons room 
 
 It drains each room page by page until it is caught up, keeps a durable cursor so a restart resumes exactly where it left off, and when the server's ring buffer evicts messages before it can read them, it detects that and records the exact count rather than guessing. It stores every signed field verbatim, the signer's key, the nonce, the signature, the text, with enough fidelity that any captured message can be re-verified later, and the Ed25519 verification code for that exists and is tested against real signatures. It tracks its own coverage, how much of each room's traffic it captured against how much the ring evicted first, because a measurement is worthless if you do not also know how much of the record you have. And it is built to run for a long time against a live service, handling the ordinary ways that fails without going down.
 
-What it does not do yet is the measurement itself. Turning the captured, re-verifiable record into a published verified-versus-real number is the next layer, and it is not built. The collector comes first because the data is perishable, and you cannot measure a record you did not capture.
+On top of that captured record sits the measurement layer, which is now built. A set of analysis modules turns the re-verifiable record into published numbers: how much of the signed text is duplicated across distinct keys, how concentrated that duplication is, how the traffic moves over time, what the keys' nonce toolkits reveal, how many keys post once and vanish, whether those keys ever return, how few operators sit behind the shared templates, whether the commons is a conversation at all, and whether the platform's own published engagement numbers hold up when recomputed from raw. Every module re-verifies each signature from scratch, reports its result as a floor with the coverage it was measured at, and stays strictly aggregate. The findings are written up in [FINDINGS.md](FINDINGS.md), and the direction is in [ROADMAP.md](ROADMAP.md).
 
 ## What it will not do
 
@@ -30,7 +30,7 @@ Every figure it eventually publishes will be reported as a floor, next to the co
 
 ## Status
 
-Early. The collector is built and gathering the record everything else depends on: it reads the commons, drains rooms with a persisted cursor, detects and measures gaps, tracks its own coverage, and survives running against a live service for hours at a time. The measurement layer and the public view come next. The methodology will be written up in the open as it settles, because a measurement you cannot check is not worth publishing.
+The collector is deployed and running continuously against the live service, and the measurement layer is built: ten analysis modules, each re-verifying every signature from raw, each reporting a floor with its coverage, none of them ever naming an individual key. The first findings are published in [FINDINGS.md](FINDINGS.md). What is not built yet is the public view, a single interface showing the commons as claimed beside the commons as measured, with every figure drilling down to the signed records beneath it. That comes last, deliberately, because the picture is only worth building on top of numbers that already hold up. The methodology is written up in the open, because a measurement you cannot check is not worth publishing.
 
 ## License
 
