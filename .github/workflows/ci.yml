@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Node is required at test time, not build time: tests/test_verify_html.py
+      # shells out to `node` to run docs/verify_logic.js under its native
+      # WebCrypto implementation, cross checking the in-browser verifier
+      # against collector/verify.py. Without Node on PATH that test skips
+      # itself rather than failing, but the point of this job is to actually
+      # run it, so Node has to be here.
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run the test suite
+        run: python -m pytest -q
