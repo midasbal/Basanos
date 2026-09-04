@@ -26,6 +26,7 @@ Usage:
 import argparse
 import json
 import os
+import re
 from datetime import datetime, timezone
 
 from collector.coverage import CoverageTracker
@@ -37,6 +38,25 @@ CAVEAT = (
     "some rooms may intend heartbeat-style posting, so this is a statement "
     "about the shape of the traffic, not a verdict about any poster."
 )
+
+
+_VALID_ROOM_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+def _validate_room(room):
+    """Reject a room name that could escape the intended directory when
+    used in os.path.join (below, and in default_out_path) -- a room
+    containing "/" or ".." would let --room build a path outside
+    <data-dir>/rooms/ on read or outside <data-dir>/analysis/ on write.
+    Every real room name (lobby, meta, fixture-room-... in the fixtures)
+    matches this pattern; nothing valid is rejected. Raised before any
+    path is built or any file is opened or created.
+    """
+    if not _VALID_ROOM_RE.match(room):
+        raise ValueError(
+            f"invalid room {room!r}: must match {_VALID_ROOM_RE.pattern} "
+            "(letters, digits, underscore, hyphen only)"
+        )
 
 
 def _iter_json_lines(path):
@@ -63,6 +83,7 @@ def compute_duplication_stats(data_dir, room="lobby"):
     Returns a dict with the raw counters and aggregates needed by both the
     human-readable report and the JSON output. Reads only; writes nothing.
     """
+    _validate_room(room)
     messages_path = os.path.join(data_dir, "rooms", room, "messages.jsonl")
 
     checked = 0
