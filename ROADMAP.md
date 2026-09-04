@@ -1,26 +1,26 @@
 # Roadmap
 
-This is the direction, not a set of promises. Almost none of it is built. Everything here runs on the time series the collector is only now starting to gather, so the honest state is that Basanos can record the commons today and will be able to measure it once there is enough record to measure. I am writing the plan down so the direction is public, and so the lines at the bottom sit on record next to the ambitions.
+This is the direction, not a set of promises. Some of it is built and published; much of it is not. I am writing the plan down so the direction is public, and so the lines at the bottom sit on record next to the ambitions.
 
 ## Where it is now
 
-The collector is built and running: it reads the public commons, captures signed records with enough fidelity to re-verify them, detects and measures the gaps where the ring evicted messages before it could read them, and tracks its own coverage. What does not exist yet is the measurement. Turning the captured record into a published verified-versus-real number is the whole point, and it is the next thing.
+The collector is built and running: it reads the public commons, captures signed records with enough fidelity to re-verify them, detects and measures the gaps where the ring evicted messages before it could read them, and tracks its own coverage and its own uptime. The measurement layer now exists too. Several measurements are built and their results published in FINDINGS.md, each re-verifying every signature from the raw record and reporting a floor with its coverage stated: cross-key duplication, coordination concentration, an activity curve over time, room-controlled timing synchrony, and nonce fingerprinting. What follows is the rest of the direction, some of it built, some still ahead.
 
 ## The measurement
 
 These are the questions I want the data to answer, in rough order of how much each depends on the ones before it.
 
-Coverage-weighted uncertainty comes first, because it governs everything else. Every number Basanos publishes should carry a confidence interval and the coverage it was measured at, and no statistic should be shown over a window the collector did not adequately capture. This needs one change in the collector as well, a record of when it was and was not running, so that "coverage" means the fraction of all traffic and not just the fraction of what it saw while awake. A measurement without its own error bars is not one.
+Coverage-weighted uncertainty comes first, because it governs everything else. Every number Basanos publishes should carry a confidence interval and the coverage it was measured at, and no statistic should be shown over a window the collector did not adequately capture. (Partly built: every published number already carries the coverage it was measured at and is stated as a floor, and the collector now records when it was and was not running. The formal confidence interval on each statistic is still to come.) A measurement without its own error bars is not one.
 
-Cross-key duplication and content diversity: how much distinct content the commons actually carries against how many distinct keys post it. This is the plainest cut at the verified-versus-real gap, and the one to state most carefully, because some rooms may intend heartbeat-style posting. It is a statement about the shape of the traffic, never about any poster.
+Cross-key duplication and content diversity: how much distinct content the commons actually carries against how many distinct keys post it. This is the plainest cut at the verified-versus-real gap, and the one to state most carefully, because some rooms may intend heartbeat-style posting. It is a statement about the shape of the traffic, never about any poster. (Duplication is built and published; the content-diversity view is still ahead.)
 
-Nonce fingerprinting: how a key generates its nonces is a fingerprint of the software behind it, and it is not something a farmer varies by accident. A signal in its own right, and the backbone of the item below it.
+Nonce fingerprinting: how a key generates its nonces is a fingerprint of the software behind it, and it is not something a farmer varies by accident. A signal in its own right, and the backbone of the item below it. (Built and published.)
 
-Operator clustering: the reframing that matters most. Collapse tens of thousands of keys into the far smaller number of operators actually behind them, by shared templates, nonce families, and co-timing. Every cluster has to be backed by observable evidence, and it stops at the operator, never a person.
+Operator clustering: the reframing that matters most. Collapse tens of thousands of keys into the far smaller number of operators actually behind them, by shared templates, nonce families, and co-timing. Every cluster has to be backed by observable evidence, and it stops at the operator, never a person. (Not built. This is the ceiling item, deliberately left until the measurements it would rest on have held up.)
 
-Timing and interaction: whether keys post in lockstep, whether the population goes quiet on a human schedule, and whether there is any real reply structure or only parallel monologue. These say less about how many agents there are and more about what kind.
+Timing and interaction: whether keys post in lockstep, whether the population goes quiet on a human schedule, and whether there is any real reply structure or only parallel monologue. These say less about how many agents there are and more about what kind. (The timing half is built and published, including a control that separates real clustering from the room's own rhythm. The interaction and reply-structure half is still ahead.)
 
-Cohorts over time: group keys by when they first appeared, watch whether each cohort persists or churns, and lay the timeline of airdrop news over the top. This is the one thing that only exists if the collector is recording now, which is why it is recording now.
+Cohorts over time: group keys by when they first appeared, watch whether each cohort persists or churns, and lay the timeline of airdrop news over the top. This is the one thing that only exists if the collector is recording now, which is why it is recording now. (Not built. Along with any multi-day pattern, this is gated on the collector accumulating continuous days, which it is now doing.)
 
 ## Keeping it honest
 
