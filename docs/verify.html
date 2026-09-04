@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Basanos: verify a signed message</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    max-width: 760px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+    line-height: 1.5;
+    color: #1a1a1a;
+    background: #fff;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.1rem; margin-top: 2rem; }
+  p.subtitle { color: #555; margin-top: 0; }
+  .box {
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 1rem;
+    margin: 1rem 0;
+  }
+  .privacy {
+    background: #f0f7f0;
+    border-color: #9cc99c;
+  }
+  textarea {
+    width: 100%;
+    box-sizing: border-box;
+    height: 10rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.85rem;
+    padding: 0.5rem;
+  }
+  button {
+    font-size: 1rem;
+    padding: 0.5rem 1.25rem;
+    margin-top: 0.5rem;
+    cursor: pointer;
+  }
+  button:disabled { cursor: not-allowed; opacity: 0.5; }
+  #result {
+    margin-top: 1rem;
+    font-size: 1.1rem;
+    font-weight: bold;
+  }
+  #result.verified { color: #1a7a1a; }
+  #result.not-verified { color: #a11; }
+  #reason { font-weight: normal; font-size: 0.95rem; color: #333; }
+  .details {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.8rem;
+    word-break: break-all;
+    background: #f7f7f7;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 0.5rem;
+    margin-top: 0.5rem;
+    white-space: pre-wrap;
+  }
+  .unsupported {
+    background: #fff3f0;
+    border-color: #d99;
+    color: #a11;
+    font-weight: bold;
+  }
+  .example {
+    font-size: 0.8rem;
+    color: #555;
+  }
+  #selftest-output {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.8rem;
+    white-space: pre-wrap;
+    margin-top: 0.5rem;
+  }
+  footer {
+    margin-top: 3rem;
+    font-size: 0.8rem;
+    color: #777;
+  }
+</style>
+</head>
+<body>
+
+<h1>Basanos: verify a signed message</h1>
+<p class="subtitle">Check one signed record from the Technocore commons, entirely in your browser.</p>
+
+<div class="box privacy">
+  <strong>Nothing you paste is sent anywhere.</strong> This page makes no network requests at all.
+  Everything happens in your browser, using the browser's own built in cryptography
+  (<code>crypto.subtle</code>), and nothing is sent to any server, including this one.
+  You can verify this yourself: open your browser's network tab before pasting anything, or
+  simply disconnect from the network and this page will still work.
+</div>
+
+<div class="box">
+  <strong>What this checks:</strong> that the holder of the given did:key signed this exact text,
+  with this exact nonce, in this exact room. That is what a valid Ed25519 signature proves and
+  nothing more.<br><br>
+  <strong>What this does NOT prove:</strong> that there is a real, functioning agent behind that
+  key, doing anything an observer would call participation. A signature proves someone holds a
+  key. It does not prove what is on the other end of it. That is the whole reason Basanos exists:
+  to measure the gap between the two, not to assume there isn't one.
+</div>
+
+<h2>Paste a signed message record</h2>
+<p class="example">
+  Paste one JSON object as stored in a room's <code>messages.jsonl</code>, with at least
+  <code>from</code>, <code>room</code>, <code>nonce</code>, <code>text</code>, and <code>sig</code>
+  fields. Example shape:
+  <span class="details" style="display: inline; padding: 0;">{"room": "lobby", "from": "did:key:z...", "nonce": "1700000000123", "text": "hello", "sig": "..."}</span>
+</p>
+<textarea id="record-input" placeholder='{"room": "lobby", "from": "did:key:z...", "nonce": "...", "text": "...", "sig": "..."}'></textarea>
+<br>
+<button id="verify-button">Verify</button>
+
+<div id="result"></div>
+<div id="reason"></div>
+<div id="details" class="details" style="display: none;"></div>
+
+<div id="unsupported-banner" class="box unsupported" style="display: none;">
+  Your browser does not support the Ed25519 algorithm in its Web Crypto implementation.
+  This page will not silently fall back to anything less trustworthy. Please use a current
+  version of Chrome, Firefox, Safari, or Edge, or re-verify this record using the Python path
+  in the Basanos repository (<code>collector/verify.py</code>) instead.
+</div>
+
+<h2>Self-test</h2>
+<p>
+  This runs a small set of known-good and known-bad signed records built into this page and
+  reports whether this page's own verification logic reaches the correct verdict on each one.
+  The same records and verdicts are checked automatically against the Python implementation in
+  the Basanos test suite (see <code>tests/test_verify_html.py</code>); this button lets you run
+  the equivalent check yourself, in your own browser, without installing anything.
+</p>
+<button id="selftest-button">Run self-test</button>
+<div id="selftest-output"></div>
+
+<footer>
+  <p>
+    This page implements exactly the same verification collector/verify.py does: base58btc
+    decoding of the did:key, the same multicodec prefix check, the same
+    <code>room|nonce|text</code> signed string, the same base64url signature decoding, and
+    Ed25519 verification. No third party cryptography library is used; the signature check
+    itself is the browser's own <code>crypto.subtle.verify</code>.
+  </p>
+  <p>
+    Basanos measures the gap between verified and real participation in the Technocore agent
+    commons. It never scores, ranks, labels, or names any individual identity.
+  </p>
+</footer>
+
+<script>
+/* BEGIN VERIFY LOGIC (mirrors docs/verify_logic.js exactly, kept in sync
+   by tests/test_verify_html.py, which asserts this block is byte for
+   byte identical to that file). This is inlined, not loaded via
+   <script src>, so the page makes zero external requests. */
+var Basanos = (function () {
+  "use strict";
+
+  // Same alphabet, same order, as collector/verify.py's _B58_ALPHABET.
+  var B58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+  // Same two bytes as collector/verify.py's _ED25519_MULTICODEC_PREFIX,
+  // bytes((0xED, 0x01)).
+  var ED25519_MULTICODEC_PREFIX = [0xed, 0x01];
+
+  function VerifyError(kind, message) {
+    this.kind = kind; // "unsupported_key" or "malformed_record", matching
+    // collector/verify.py's UnsupportedKeyType and MalformedRecord
+    this.message = message;
+  }
+
+  // Mirrors collector/verify.py's b58decode(s) exactly: same alphabet,
+  // same big-integer accumulation (num = num * 58 + index(char)), same
+  // leading-'1'-means-leading-zero-byte rule. Uses BigInt because the
+  // accumulated integer is far larger than a JS Number can hold exactly
+  // (a 32-byte-plus multicodec-prefixed value), the same reason Python's
+  // arbitrary-precision int is used there.
+  function b58decode(s) {
+    for (var i = 0; i < s.length; i++) {
+      if (s.charCodeAt(i) > 127) {
+        throw new VerifyError(
+          "unsupported_key",
+          "non-ASCII characters in multibase string: " + JSON.stringify(s)
+        );
+      }
+    }
+    var num = 0n;
+    for (var j = 0; j < s.length; j++) {
+      var idx = B58_ALPHABET.indexOf(s[j]);
+      if (idx === -1) {
+        throw new VerifyError("unsupported_key", "not valid base58: " + JSON.stringify(s));
+      }
+      num = num * 58n + BigInt(idx);
+    }
+    var hex = num.toString(16);
+    if (hex.length % 2 === 1) {
+      hex = "0" + hex;
+    }
+    var combined = num === 0n ? new Uint8Array(0) : hexToBytes(hex);
+    // n_pad = len(s) - len(s.lstrip("1")) in collector/verify.py: the
+    // count of leading '1' characters.
+    var nPad = 0;
+    for (var k = 0; k < s.length; k++) {
+      if (s[k] === "1") {
+        nPad++;
+      } else {
+        break;
+      }
+    }
+    var result = new Uint8Array(nPad + combined.length);
+    result.set(combined, nPad);
+    return result;
+  }
+
+  function hexToBytes(hex) {
+    var bytes = new Uint8Array(hex.length / 2);
+    for (var i = 0; i < bytes.length; i++) {
+      bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
+    }
+    return bytes;
+  }
+
+  function bytesToHex(bytes) {
+    var out = "";
+    for (var i = 0; i < bytes.length; i++) {
+      out += bytes[i].toString(16).padStart(2, "0");
+    }
+    return out;
+  }
+
+  // Mirrors collector/verify.py's did_key_to_ed25519_pubkey exactly:
+  // require the "did:key:z" prefix, base58-decode the rest of the
+  // multibase string with the leading 'z' dropped, check the two-byte
+  // multicodec prefix, and return the raw public key bytes (should be 32
+  // for Ed25519, the same length Ed25519PublicKey.from_public_bytes
+  // would reject otherwise).
+  function didKeyToEd25519PublicKeyBytes(did) {
+    if (typeof did !== "string" || did.indexOf("did:key:z") !== 0) {
+      throw new VerifyError("unsupported_key", "not a did:key: " + JSON.stringify(did));
+    }
+    var multibase = did.slice("did:key:".length);
+    var raw = b58decode(multibase.slice(1)); // drop the 'z' base58btc multibase prefix
+    if (raw.length < 2 || raw[0] !== ED25519_MULTICODEC_PREFIX[0] || raw[1] !== ED25519_MULTICODEC_PREFIX[1]) {
+      var prefixHex = bytesToHex(raw.slice(0, 2));
+      throw new VerifyError(
+        "unsupported_key",
+        "unsupported multicodec prefix in " + JSON.stringify(did) + ": " + prefixHex
+      );
+    }
+    var pubkeyBytes = raw.slice(2);
+    if (pubkeyBytes.length !== 32) {
+      throw new VerifyError(
+        "unsupported_key",
+        "malformed Ed25519 public key bytes in " + JSON.stringify(did) + ": expected 32 bytes, got " + pubkeyBytes.length
+      );
+    }
+    return pubkeyBytes;
+  }
+
+  // Mirrors collector/verify.py's build_signing_payload exactly: the
+  // same three-field, pipe-separated string, encoded as UTF-8.
+  function buildSigningPayload(room, nonce, text) {
+    var s = String(room) + "|" + String(nonce) + "|" + String(text);
+    return { bytes: new TextEncoder().encode(s), signedString: s };
+  }
+
+  // Mirrors collector/verify.py's inline sig decode exactly:
+  // base64.urlsafe_b64decode(sig + "=" * (-len(sig) % 4)). The padding
+  // formula (4 - len % 4) % 4 produces the same 0/3/2/1 pad counts as
+  // Python's -len(sig) % 4 for len % 4 of 0/1/2/3 respectively.
+  function base64UrlDecode(sig) {
+    if (typeof sig !== "string") {
+      throw new VerifyError("malformed_record", "sig is not valid base64url: " + JSON.stringify(sig));
+    }
+    var padLen = (4 - (sig.length % 4)) % 4;
+    var padded = sig + "=".repeat(padLen);
+    var standard = padded.replace(/-/g, "+").replace(/_/g, "/");
+    var binary;
+    try {
+      binary = atob(standard);
+    } catch (e) {
+      throw new VerifyError("malformed_record", "sig is not valid base64url: " + JSON.stringify(sig));
+    }
+    var bytes = new Uint8Array(binary.length);
+    for (var i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+  }
+
+  // Mirrors collector/verify.py's is_signed exactly.
+  function isSigned(record) {
+    return typeof record.from === "string" && record.from.indexOf("did:key:") === 0;
+  }
+
+  // Probes whether this runtime's WebCrypto actually supports Ed25519
+  // (not just that crypto.subtle exists), since some browsers expose
+  // SubtleCrypto without every algorithm. Never falls back to anything
+  // else if this fails, per the page's own stated policy.
+  async function detectEd25519Support() {
+    try {
+      if (!(globalThis.crypto && globalThis.crypto.subtle && globalThis.crypto.subtle.generateKey)) {
+        return false;
+      }
+      await globalThis.crypto.subtle.generateKey({ name: "Ed25519" }, false, ["sign", "verify"]);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Mirrors collector/verify.py's verify_record, with the same collapsing
+  // behavior every analysis module in this project already uses at its
+  // own verify_record call site: UnsupportedKeyType and MalformedRecord
+  // both mean "not verifiable", reported here as NOT_VERIFIED with a
+  // stated reason, never a crash and never silently treated as verified.
+  async function verifyRecord(record) {
+    if (record === null || typeof record !== "object") {
+      return { verdict: "NOT_VERIFIED", reason: "not a JSON object" };
+    }
+    var did = record.from;
+    var pubkeyBytes;
+    try {
+      pubkeyBytes = didKeyToEd25519PublicKeyBytes(did);
+    } catch (e) {
+      if (e instanceof VerifyError) {
+        return { verdict: "NOT_VERIFIED", reason: e.message };
+      }
+      throw e;
+    }
+    var publicKeyHex = bytesToHex(pubkeyBytes);
+
+    var built = buildSigningPayload(record.room, record.nonce, record.text);
+
+    var sigBytes;
+    try {
+      sigBytes = base64UrlDecode(record.sig);
+    } catch (e) {
+      if (e instanceof VerifyError) {
+        return {
+          verdict: "NOT_VERIFIED",
+          reason: e.message,
+          signedString: built.signedString,
+          publicKeyHex: publicKeyHex,
+        };
+      }
+      throw e;
+    }
+
+    var cryptoKey;
+    try {
+      cryptoKey = await globalThis.crypto.subtle.importKey("raw", pubkeyBytes, { name: "Ed25519" }, false, ["verify"]);
+    } catch (e) {
+      return {
+        verdict: "NOT_VERIFIED",
+        reason: "malformed Ed25519 public key bytes: " + e.message,
+        signedString: built.signedString,
+        publicKeyHex: publicKeyHex,
+      };
+    }
+
+    var ok;
+    try {
+      ok = await globalThis.crypto.subtle.verify("Ed25519", cryptoKey, sigBytes, built.bytes);
+    } catch (e) {
+      return {
+        verdict: "NOT_VERIFIED",
+        reason: "verification error: " + e.message,
+        signedString: built.signedString,
+        publicKeyHex: publicKeyHex,
+      };
+    }
+
+    return {
+      verdict: ok ? "VERIFIED" : "NOT_VERIFIED",
+      reason: ok ? null : "signature does not match",
+      signedString: built.signedString,
+      publicKeyHex: publicKeyHex,
+    };
+  }
+
+  return {
+    B58_ALPHABET: B58_ALPHABET,
+    ED25519_MULTICODEC_PREFIX: ED25519_MULTICODEC_PREFIX,
+    VerifyError: VerifyError,
+    b58decode: b58decode,
+    didKeyToEd25519PublicKeyBytes: didKeyToEd25519PublicKeyBytes,
+    buildSigningPayload: buildSigningPayload,
+    base64UrlDecode: base64UrlDecode,
+    isSigned: isSigned,
+    detectEd25519Support: detectEd25519Support,
+    verifyRecord: verifyRecord,
+    bytesToHex: bytesToHex,
+  };
+})();
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = Basanos;
+}
+/* END VERIFY LOGIC */
+</script>
+
+<script>
+/* Page wiring only, no verification logic of its own: everything above
+   this point is the single source of truth for what gets checked and
+   how. This block only reads the textarea, calls Basanos.verifyRecord,
+   and renders the result. Nothing here ever sends the pasted record
+   anywhere; there is no fetch, no XMLHttpRequest, no beacon, anywhere on
+   this page. */
+(function () {
+  "use strict";
+
+  var resultEl = document.getElementById("result");
+  var reasonEl = document.getElementById("reason");
+  var detailsEl = document.getElementById("details");
+  var button = document.getElementById("verify-button");
+  var input = document.getElementById("record-input");
+  var unsupportedBanner = document.getElementById("unsupported-banner");
+
+  function renderResult(outcome, parseErrorMessage) {
+    resultEl.className = "";
+    reasonEl.textContent = "";
+    detailsEl.style.display = "none";
+    detailsEl.textContent = "";
+
+    if (parseErrorMessage) {
+      resultEl.textContent = "NOT VERIFIED";
+      resultEl.className = "not-verified";
+      reasonEl.textContent = parseErrorMessage;
+      return;
+    }
+
+    if (outcome.verdict === "VERIFIED") {
+      resultEl.textContent = "VERIFIED";
+      resultEl.className = "verified";
+      reasonEl.textContent = "This signature is valid for this did:key over this exact message.";
+    } else {
+      resultEl.textContent = "NOT VERIFIED";
+      resultEl.className = "not-verified";
+      reasonEl.textContent = outcome.reason || "unknown reason";
+    }
+
+    if (outcome.signedString !== undefined || outcome.publicKeyHex !== undefined) {
+      var lines = [];
+      if (outcome.publicKeyHex !== undefined) {
+        lines.push("decoded public key (hex): " + outcome.publicKeyHex);
+      }
+      if (outcome.signedString !== undefined) {
+        lines.push("reconstructed signed string: " + outcome.signedString);
+      }
+      detailsEl.textContent = lines.join("\n");
+      detailsEl.style.display = "block";
+    }
+  }
+
+  async function onVerifyClick() {
+    var record;
+    try {
+      record = JSON.parse(input.value);
+    } catch (e) {
+      renderResult(null, "Could not parse input as JSON: " + e.message);
+      return;
+    }
+    button.disabled = true;
+    try {
+      var outcome = await Basanos.verifyRecord(record);
+      renderResult(outcome, null);
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  button.addEventListener("click", function () {
+    onVerifyClick();
+  });
+
+  // Self-test: a small, fixed set of known-good and known-bad records,
+  // with their expected verdict stated alongside each one, so a reader
+  // can see by eye what each case is testing. The same records and
+  // verdicts are checked against collector/verify.py in
+  // tests/test_verify_html.py; this is the in-browser equivalent, for
+  // anyone who wants to run it without installing anything.
+  var SELF_TEST_CASES = [
+    {
+      name: "known-good signature",
+      record: {
+        room: "lobby",
+        from: "did:key:z6MkfK5NC9JAWQWu5YTaxcmwYTXnbvQ88nY5pLmGuXJhorjB",
+        nonce: "1700000000123",
+        text: "basanos self test message one",
+        sig: "BAWL8tst51e-VSiEDZqUQiA_UdLVza06VjNmE2ris5ll1y6-YQXQg8spnzKqGUC5EogZTRiyuzedcpJCKBfkAQ",
+      },
+      expected: "VERIFIED",
+    },
+    {
+      name: "tampered signature (one bit flipped)",
+      record: {
+        room: "lobby",
+        from: "did:key:z6MkfK5NC9JAWQWu5YTaxcmwYTXnbvQ88nY5pLmGuXJhorjB",
+        nonce: "1700000000123",
+        text: "basanos self test message one",
+        sig: "AAWL8tst51e-VSiEDZqUQiA_UdLVza06VjNmE2ris5ll1y6-YQXQg8spnzKqGUC5EogZTRiyuzedcpJCKBfkAQ",
+      },
+      expected: "NOT_VERIFIED",
+    },
+    {
+      name: "malformed did:key (not valid base58)",
+      record: {
+        room: "lobby",
+        from: "did:key:zINVALIDBASE58!!!",
+        nonce: "1700000000123",
+        text: "basanos self test message one",
+        sig: "BAWL8tst51e-VSiEDZqUQiA_UdLVza06VjNmE2ris5ll1y6-YQXQg8spnzKqGUC5EogZTRiyuzedcpJCKBfkAQ",
+      },
+      expected: "NOT_VERIFIED",
+    },
+    {
+      name: "malformed sig (not valid base64url)",
+      record: {
+        room: "lobby",
+        from: "did:key:z6MkfK5NC9JAWQWu5YTaxcmwYTXnbvQ88nY5pLmGuXJhorjB",
+        nonce: "1700000000123",
+        text: "basanos self test message one",
+        sig: "not-valid-base64!!!",
+      },
+      expected: "NOT_VERIFIED",
+    },
+  ];
+
+  document.getElementById("selftest-button").addEventListener("click", async function () {
+    var out = document.getElementById("selftest-output");
+    out.textContent = "running...";
+    var lines = [];
+    var allPass = true;
+    for (var i = 0; i < SELF_TEST_CASES.length; i++) {
+      var testCase = SELF_TEST_CASES[i];
+      var outcome = await Basanos.verifyRecord(testCase.record);
+      var pass = outcome.verdict === testCase.expected;
+      if (!pass) {
+        allPass = false;
+      }
+      lines.push((pass ? "PASS" : "FAIL") + "  " + testCase.name + "  (expected " + testCase.expected + ", got " + outcome.verdict + ")");
+    }
+    lines.push("");
+    lines.push(allPass ? "all self-test cases passed" : "SELF-TEST FAILURE: do not trust this page's verdicts until this is fixed");
+    out.textContent = lines.join("\n");
+  });
+
+  Basanos.detectEd25519Support().then(function (supported) {
+    if (!supported) {
+      unsupportedBanner.style.display = "block";
+      button.disabled = true;
+      document.getElementById("selftest-button").disabled = true;
+    }
+  });
+})();
+</script>
+
+</body>
+</html>
