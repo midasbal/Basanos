@@ -298,3 +298,44 @@ def test_missing_coverage_file_does_not_crash(tmp_path):
 
     report = format_report(stats)
     assert "No coverage.jsonl found" in report
+
+
+def test_non_string_sig_is_a_failed_reverify_not_a_crash(tmp_path):
+    # A bare number where sig should be a string. No valid signature is
+    # possible or needed here: verify.py's base64 decoding raises a raw
+    # TypeError on this before any cryptographic check happens. This
+    # module never keys on text, but it does call verify_record, so it is
+    # affected by this crash exactly the same way the other three are.
+    record = {
+        "room": ROOM,
+        "seq": 1,
+        "ts": _ts_at(0),
+        "from": FIXTURE_DID_1,
+        "text": "hello",
+        "nonce": "1",
+        "sig": 12345,
+        "captured_at": _ts_at(0),
+        "source": "test",
+    }
+    data_dir = tmp_path / "data"
+    _write_messages(str(data_dir / "rooms" / ROOM / "messages.jsonl"), [record])
+
+    stats = compute_diurnal_stats(str(data_dir), room=ROOM)  # must not raise
+
+    assert stats["signed_checked"] == 1
+    assert stats["signed_reverified"] == 0
+    assert stats["signed_reverify_failed"] == 1
+
+
+def test_valid_record_result_unchanged_by_the_new_guard(tmp_path):
+    # Regression guard: the existing hand-calculated fixture produces
+    # exactly the result it did before this fix.
+    data_dir = _setup(tmp_path)
+    stats = compute_diurnal_stats(data_dir, room=ROOM, bucket_seconds=60.0)
+
+    assert stats["signed_checked"] == 7
+    assert stats["signed_reverified"] == 6
+    assert stats["signed_reverify_failed"] == 1
+    assert _bin(stats, 0)["captured_posts"] == 3
+    assert _bin(stats, 1)["captured_posts"] == 1
+    assert _bin(stats, 2)["captured_posts"] == 2

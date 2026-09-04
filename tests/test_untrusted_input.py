@@ -95,6 +95,124 @@ def test_valid_page_with_null_first_seq_still_processes_normally(tmp_path):
     assert result["since_after"] == 5
 
 
+def test_page_with_non_string_sig_is_a_recorded_failure_not_a_crash(tmp_path):
+    # A bare number where sig should be a string: verify.py's base64
+    # decoding would raise a raw TypeError on this if it ever reached
+    # re-verification. Refused at capture instead, message never stored.
+    page = {
+        "room": "lobby",
+        "count": 1,
+        "first_seq": 101,
+        "last_seq": 101,
+        "generation": 0,
+        "messages": [{"seq": 101, "ts": "t", "from": "did:key:zabc", "text": "x", "sig": 12345}],
+    }
+    client = FakeClient(room_pages={"lobby": page})
+    follower = RoomFollower(client, str(tmp_path), "lobby", source="test")
+
+    result = follower.fetch_and_store()  # must not raise TypeError
+
+    assert result["failed"] is True
+    assert "sig" in result["error"]
+    assert result["new_count"] == 0
+    assert read_jsonl(follower.messages_path) == []
+
+
+def test_page_with_non_string_text_is_a_recorded_failure_not_a_crash(tmp_path):
+    # A JSON array where text should be a string: the analysis layer uses
+    # text as a dict key, which would raise "unhashable type" on this.
+    # Refused at capture instead, message never stored.
+    page = {
+        "room": "lobby",
+        "count": 1,
+        "first_seq": 101,
+        "last_seq": 101,
+        "generation": 0,
+        "messages": [{"seq": 101, "ts": "t", "from": "did:key:zabc", "text": ["not", "a", "string"], "sig": "s"}],
+    }
+    client = FakeClient(room_pages={"lobby": page})
+    follower = RoomFollower(client, str(tmp_path), "lobby", source="test")
+
+    result = follower.fetch_and_store()  # must not raise TypeError
+
+    assert result["failed"] is True
+    assert "text" in result["error"]
+    assert result["new_count"] == 0
+    assert read_jsonl(follower.messages_path) == []
+
+
+def test_page_with_non_string_from_is_a_recorded_failure_not_a_crash(tmp_path):
+    page = {
+        "room": "lobby",
+        "count": 1,
+        "first_seq": 101,
+        "last_seq": 101,
+        "generation": 0,
+        "messages": [{"seq": 101, "ts": "t", "from": 12345, "text": "x", "sig": "s"}],
+    }
+    client = FakeClient(room_pages={"lobby": page})
+    follower = RoomFollower(client, str(tmp_path), "lobby", source="test")
+
+    result = follower.fetch_and_store()  # must not raise
+
+    assert result["failed"] is True
+    assert "from" in result["error"]
+    assert result["new_count"] == 0
+    assert read_jsonl(follower.messages_path) == []
+
+
+def test_page_with_numeric_nonce_still_processes_normally(tmp_path):
+    # Sanity check the validator isn't over-strict: nonce is genuinely a
+    # number on the wire for real messages (see the nonce comment in
+    # collector/core.py's _store_page), never a crash source, and must
+    # keep working exactly as before -- only from/text/sig are checked.
+    page = {
+        "room": "lobby",
+        "count": 1,
+        "first_seq": 101,
+        "last_seq": 101,
+        "generation": 0,
+        "messages": [{"seq": 101, "ts": "t", "from": "did:key:zabc", "text": "x", "nonce": 1700000000123, "sig": "s"}],
+    }
+    client = FakeClient(room_pages={"lobby": page})
+    follower = RoomFollower(client, str(tmp_path), "lobby", source="test")
+
+    result = follower.fetch_and_store()
+
+    assert result["failed"] is False
+    assert result["new_count"] == 1
+    stored = read_jsonl(follower.messages_path)
+    assert stored[0]["nonce"] == "1700000000123"
+
+
+def test_valid_page_with_all_string_fields_still_processes_normally(tmp_path):
+    # Regression guard: a normal, valid page (every field the right type)
+    # must produce exactly the same result as before this fix.
+    page = {
+        "room": "lobby",
+        "count": 1,
+        "first_seq": 101,
+        "last_seq": 101,
+        "generation": 0,
+        "messages": [
+            {"seq": 101, "ts": "t", "from": "did:key:zabc", "text": "hello", "nonce": "1", "sig": "s"}
+        ],
+    }
+    client = FakeClient(room_pages={"lobby": page})
+    follower = RoomFollower(client, str(tmp_path), "lobby", source="test")
+
+    result = follower.fetch_and_store()
+
+    assert result["failed"] is False
+    assert result["new_count"] == 1
+    assert result["since_after"] == 101
+    stored = read_jsonl(follower.messages_path)
+    assert len(stored) == 1
+    assert stored[0]["from"] == "did:key:zabc"
+    assert stored[0]["text"] == "hello"
+    assert stored[0]["sig"] == "s"
+
+
 def test_one_malformed_room_does_not_block_a_run_once_pass(tmp_path):
     from collector.config import Config
     from collector.core import Collector

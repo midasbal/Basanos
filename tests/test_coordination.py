@@ -314,3 +314,70 @@ def test_top_n_ranks_by_distinct_keys_not_message_count(tmp_path):
 
     assert [e["text"] for e in stats["top_n_templates"]] == [text_a, text_b]
     assert [e["distinct_keys"] for e in stats["top_n_templates"]] == [3, 2]
+
+
+def test_non_string_sig_is_a_failed_reverify_not_a_crash(tmp_path):
+    # A bare number where sig should be a string. No valid signature is
+    # possible or needed here: verify.py's base64 decoding raises a raw
+    # TypeError on this before any cryptographic check happens.
+    record = {
+        "room": ROOM,
+        "seq": 1,
+        "ts": "2000-01-01T00:00:01.000000Z",
+        "from": FIXTURE_DID_1,
+        "text": "hello",
+        "nonce": "1",
+        "sig": 12345,
+        "captured_at": "2000-01-01T00:00:01.000000Z",
+        "source": "test",
+    }
+    data_dir = tmp_path / "data"
+    _write_messages(str(data_dir / "rooms" / ROOM / "messages.jsonl"), [record])
+
+    stats = compute_coordination_stats(str(data_dir), room=ROOM)  # must not raise
+
+    assert stats["signed_checked"] == 1
+    assert stats["signed_reverified"] == 0
+    assert stats["signed_reverify_failed"] == 1
+
+
+def test_non_string_text_is_a_failed_reverify_not_a_crash(tmp_path):
+    # A genuinely valid signature over a text field that is a JSON array,
+    # not a string. Proves the guard fires even when re-verification
+    # itself would otherwise succeed, before text is ever used as a dict
+    # key (which would raise "unhashable type").
+    text_value = ["not", "a", "string"]
+    nonce = "1"
+    sig = _sign(FIXTURE_KEY_1, ROOM, nonce, str(text_value))
+    record = {
+        "room": ROOM,
+        "seq": 1,
+        "ts": "2000-01-01T00:00:01.000000Z",
+        "from": FIXTURE_DID_1,
+        "text": text_value,
+        "nonce": nonce,
+        "sig": sig,
+        "captured_at": "2000-01-01T00:00:01.000000Z",
+        "source": "test",
+    }
+    data_dir = tmp_path / "data"
+    _write_messages(str(data_dir / "rooms" / ROOM / "messages.jsonl"), [record])
+
+    stats = compute_coordination_stats(str(data_dir), room=ROOM)  # must not raise
+
+    assert stats["signed_checked"] == 1
+    assert stats["signed_reverified"] == 0
+    assert stats["signed_reverify_failed"] == 1
+
+
+def test_valid_record_result_unchanged_by_the_new_guards(tmp_path):
+    # Regression guard: the existing hand-calculated fixture produces
+    # exactly the result it did before this fix.
+    data_dir = _setup(tmp_path)
+    stats = compute_coordination_stats(data_dir, room=ROOM, top_n=3)
+
+    assert stats["signed_checked"] == 19
+    assert stats["signed_reverified"] == 18
+    assert stats["signed_reverify_failed"] == 1
+    assert stats["coordinated_share_messages_numerator"] == 14
+    assert stats["coordinated_share_messages_denominator"] == 18

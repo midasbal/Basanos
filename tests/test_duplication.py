@@ -159,3 +159,100 @@ def test_missing_messages_file_does_not_crash(tmp_path):
     assert stats["signed_checked"] == 0
     report = format_report(stats)
     assert "No messages.jsonl found" in report
+
+
+def test_non_string_sig_is_a_failed_reverify_not_a_crash(tmp_path):
+    # A bare number where sig should be a string. No valid signature is
+    # possible or needed here: verify.py's base64 decoding raises a raw
+    # TypeError on this before any cryptographic check happens.
+    record = {
+        "room": ROOM,
+        "seq": 1,
+        "ts": "2000-01-01T00:00:01.000000Z",
+        "from": FIXTURE_DID_1,
+        "text": "hello",
+        "nonce": "1",
+        "sig": 12345,
+        "captured_at": "2000-01-01T00:00:01.000000Z",
+        "source": "test",
+    }
+    data_dir = tmp_path / "data"
+    _write_messages(str(data_dir / "rooms" / ROOM / "messages.jsonl"), [record])
+
+    stats = compute_duplication_stats(str(data_dir), room=ROOM)  # must not raise
+
+    assert stats["signed_checked"] == 1
+    assert stats["signed_reverified"] == 0
+    assert stats["signed_reverify_failed"] == 1
+
+
+def test_non_string_text_is_a_failed_reverify_not_a_crash(tmp_path):
+    # A genuinely valid signature (the signer signed the exact bytes
+    # verify.py will re-derive) over a text field that is a JSON array,
+    # not a string. Proves the guard fires even when re-verification
+    # itself would otherwise succeed, before text is ever used as a dict
+    # key (which would raise "unhashable type").
+    text_value = ["not", "a", "string"]
+    nonce = "1"
+    sig = _sign(FIXTURE_KEY_1, ROOM, nonce, str(text_value))
+    record = {
+        "room": ROOM,
+        "seq": 1,
+        "ts": "2000-01-01T00:00:01.000000Z",
+        "from": FIXTURE_DID_1,
+        "text": text_value,
+        "nonce": nonce,
+        "sig": sig,
+        "captured_at": "2000-01-01T00:00:01.000000Z",
+        "source": "test",
+    }
+    data_dir = tmp_path / "data"
+    _write_messages(str(data_dir / "rooms" / ROOM / "messages.jsonl"), [record])
+
+    stats = compute_duplication_stats(str(data_dir), room=ROOM)  # must not raise
+
+    assert stats["signed_checked"] == 1
+    assert stats["signed_reverified"] == 0
+    assert stats["signed_reverify_failed"] == 1
+    assert stats["distinct_texts"] == 0
+
+
+def test_non_string_dict_text_is_a_failed_reverify_not_a_crash(tmp_path):
+    # Same as above but a JSON object instead of an array -- also
+    # unhashable, and confirms the guard is not array-specific.
+    text_value = {"a": 1}
+    nonce = "1"
+    sig = _sign(FIXTURE_KEY_1, ROOM, nonce, str(text_value))
+    record = {
+        "room": ROOM,
+        "seq": 1,
+        "ts": "2000-01-01T00:00:01.000000Z",
+        "from": FIXTURE_DID_1,
+        "text": text_value,
+        "nonce": nonce,
+        "sig": sig,
+        "captured_at": "2000-01-01T00:00:01.000000Z",
+        "source": "test",
+    }
+    data_dir = tmp_path / "data"
+    _write_messages(str(data_dir / "rooms" / ROOM / "messages.jsonl"), [record])
+
+    stats = compute_duplication_stats(str(data_dir), room=ROOM)  # must not raise
+
+    assert stats["signed_checked"] == 1
+    assert stats["signed_reverified"] == 0
+    assert stats["signed_reverify_failed"] == 1
+
+
+def test_valid_record_result_unchanged_by_the_new_guards(tmp_path):
+    # Regression guard: a normal, valid, all-string-field record produces
+    # exactly the result it did before this fix.
+    data_dir = _setup(tmp_path)
+    stats = compute_duplication_stats(data_dir, room=ROOM)
+
+    assert stats["signed_checked"] == 7
+    assert stats["signed_reverified"] == 6
+    assert stats["signed_reverify_failed"] == 1
+    assert stats["cross_key_duplicated_numerator"] == 2
+    assert stats["cross_key_duplicated_denominator"] == 6
+    assert stats["cross_key_duplication_rate"] == 2 / 6

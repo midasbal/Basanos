@@ -199,6 +199,20 @@ class RoomFollower:
         detect_gap); this only rejects a key that's PRESENT and non-null
         but the wrong type, plus any message missing a valid int seq,
         which has no such tolerant fallback.
+
+        Also rejects a message whose from/text/sig is present and non-null
+        but not a string. Downstream, verify.py does base64 decoding on
+        sig and the analysis layer uses text as a dict key -- either one
+        being a non-string (e.g. a bare number or a JSON array/object)
+        crashes with a raw TypeError that is never caught as "not
+        verifiable", so it is refused here instead, at the point where the
+        untrusted server data first arrives, the same way an invalid seq
+        already is. nonce is deliberately NOT included here: it is
+        genuinely a number on the wire for real messages (see the nonce
+        comment in _store_page below), never a crash source in verify.py
+        or the analysis layer (it is only ever stringified or f-string
+        interpolated, both of which accept any type), so requiring it to
+        already be a string here would reject ordinary, valid messages.
         """
         for key in ("count", "first_seq", "last_seq"):
             value = page.get(key)
@@ -212,6 +226,12 @@ class RoomFollower:
                 raise MalformedPageError(
                     f"{self.room}: message missing or invalid seq: {m!r}"
                 )
+            for key in ("from", "text", "sig"):
+                value = m.get(key)
+                if key in m and value is not None and not isinstance(value, str):
+                    raise MalformedPageError(
+                        f"{self.room}: message.{key} is not a string: {value!r}"
+                    )
 
     def _store_page(self, page, since, captured_at):
         """Apply one already-fetched page: gap check, append new messages

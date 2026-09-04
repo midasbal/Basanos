@@ -346,7 +346,19 @@ def compute_synchrony_stats(data_dir, room="lobby", top_n=DEFAULT_TOP_N, bucket_
             checked += 1
             try:
                 ok = verify_record(record)
-            except (UnsupportedKeyType, MalformedRecord, KeyError):
+            except (UnsupportedKeyType, MalformedRecord, KeyError, TypeError):
+                # TypeError covers a non-string sig (e.g. a bare number or a
+                # JSON array/object): verify.py does base64 decoding on sig,
+                # which raises TypeError rather than one of the exceptions
+                # above for a non-string value. Treated the same as any
+                # other re-verify failure, never a crash.
+                ok = False
+            if ok and not isinstance(record.get("text"), str):
+                # A genuinely valid signature over a non-string text (e.g.
+                # a JSON array or object instead of a string) would crash
+                # every text-keyed aggregate below with "unhashable type".
+                # Counted as a re-verify failure like any other record this
+                # analysis cannot safely include, not a crash.
                 ok = False
             if not ok:
                 failed += 1
