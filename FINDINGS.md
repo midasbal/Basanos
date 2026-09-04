@@ -70,6 +70,22 @@ Two smaller templates are the exception. They stay clustered at three to four ti
 
 So on the timing axis the coordination story is weaker than the content axis: most of the heavily-duplicated traffic posts roughly when the room posts, with a specific pair of templates as the exception. The strong, unambiguous finding across all three measurements is the content one, that thousands of verified keys post byte-identical text. Whether that text is also released on a shared clock is, for most of it, not supported here.
 
+## Measurement 4: nonce fingerprints, an independent axis
+
+The first three measurements all rest, one way or another, on message text: who posts the same words, how concentrated that is, and when those words arrive. This one deliberately ignores text and looks at something a poster does not choose for its meaning: the nonce it signs.
+
+Every signed message carries a nonce, and in this commons the nonce is a Unix timestamp. What varies between posters is the precision of that timestamp, visible directly in how many digits it has: 13 digits is a millisecond clock, 16 is microsecond, 19 is nanosecond. That precision is a fingerprint of the software behind the key, not of anything the poster wrote. Two keys posting identical text could run different code and show different nonce precisions; two keys posting unrelated text could run the same code and show the same one. So nonce precision is an axis independent of the text, and where it lines up with the text findings, that agreement is worth more than either signal alone.
+
+All figures here are from window B, the same 2,463,428 re-verified signed messages at 88.2 percent coverage. Every signed message had a usable numeric nonce.
+
+Across the whole lobby, the nonce precisions split three ways: about 78 percent millisecond, 14 percent nanosecond, 8 percent microsecond, with a small remainder at other lengths. So the room is dominated by one clock precision but plainly contains more than one.
+
+The revealing part is per template. Nineteen of the twenty most-duplicated templates are essentially pure millisecond: their keys, thousands each, almost all sign millisecond timestamps, and they all differ from the room-wide mix by the same small amount, the amount you would expect from being purely one precision against a room that is mostly but not entirely that precision. On this axis those nineteen are homogeneous and unremarkable.
+
+One template is not. The single largest, posted by more than fourteen thousand keys, is essentially pure nanosecond, standing far apart from every other template and from the room. Its keys run a different clock. And this is the same template that stood alone in the coordination measurement, the one whose set of signing keys barely overlapped any other template's. Two measurements that share no inputs, one built on which keys post the same text and one built on the digit length of a timestamp, both single out the same population as separate from the rest. That convergence is the strongest evidence in this document that this particular population is a distinct operation, precisely because the two signals could so easily have disagreed and did not.
+
+It is worth being equally clear about what this measurement did not find. The two templates that showed genuine timing clustering in the previous section are, on the nonce axis, ordinary: pure millisecond, indistinguishable from the main cluster. So whatever makes them cluster in time, it is not a distinct nonce toolkit. The nonce axis corroborates one population and declines to corroborate another, which is the behavior of a measurement that reports what is there rather than what would be convenient. That it can decline is the reason its agreement, where it does agree, is worth trusting.
+
 ## What is not claimed
 
 The persistence question is open. Whether the gap between verified and real is growing, shrinking, or steady over time is the question Basanos exists to answer, and it is not answered here. The two windows are not comparable as a time series, so nothing about the direction of change can be read from them. Answering it needs windows captured continuously across a known span, which is what the next measurements and continued collection are for. Timing and diurnal structure are the first cut at it.
