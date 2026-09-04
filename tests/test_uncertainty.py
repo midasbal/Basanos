@@ -198,11 +198,96 @@ def test_synchrony_and_nonce_are_recognized_but_have_no_intervals():
     stats = compute_uncertainty(synchrony_data)
     assert stats["intervals"] == []
     assert stats["coverage_floor_direction"].startswith("a bursty finding is at least this bursty")
+    # nonce and synchrony have no entry in NO_INTERVAL_REASONS, so their
+    # no_interval_reason stays None and their report text is unchanged
+    # from before clustering's reason was added.
+    assert stats["no_interval_reason"] is None
+    report = format_report(stats, "synchrony_lobby.json")
+    assert "none of this measurement type's known rate pairs were available" in report
+    assert "enumerations" not in report
 
     nonce_data = {"room_band_fractions": {"13": 0.5, "16": 0.0, "19": 0.3, "other": 0.2}}
     assert detect_measurement_type(nonce_data) == "nonce"
     stats = compute_uncertainty(nonce_data)
     assert stats["intervals"] == []
+    assert stats["no_interval_reason"] is None
+
+
+def _clustering_json():
+    # A real-shaped clustering.py output: the two sentinel fields
+    # detect_measurement_type looks for ("passes" and
+    # "keys_in_bounded_templates_count") plus enough of the rest to look
+    # like a genuine artifact, not a minimal stub.
+    return {
+        "room": "lobby",
+        "cap": 200,
+        "min_shared": 2,
+        "messages_file_found": True,
+        "signed_checked": 100,
+        "signed_reverified": 98,
+        "signed_reverify_failed": 2,
+        "malformed_lines_skipped": 0,
+        "distinct_keys_overall": 40,
+        "distinct_shared_templates": 6,
+        "bounded_template_count": 5,
+        "excluded_promiscuous_template_count": 1,
+        "keys_in_bounded_templates_count": 12,
+        "passes": [
+            {
+                "min_shared": 2,
+                "cluster_count": 6,
+                "multi_key_cluster_count": 1,
+                "singleton_count": 5,
+                "largest_cluster_size": 3,
+                "size_histogram": {"2": 0, "3-5": 1, "6-10": 0, "11-50": 0, "51-200": 0, "201-1000": 0, "1000+": 0},
+            },
+            {
+                "min_shared": 3,
+                "cluster_count": 8,
+                "multi_key_cluster_count": 0,
+                "singleton_count": 8,
+                "largest_cluster_size": 1,
+                "size_histogram": {"2": 0, "3-5": 0, "6-10": 0, "11-50": 0, "51-200": 0, "201-1000": 0, "1000+": 0},
+            },
+        ],
+        "coverage_captured_total": 90,
+        "coverage_dropped_total": 10,
+        "coverage_ratio": 0.9,
+    }
+
+
+def test_clustering_is_recognized_as_a_no_interval_measurement_type():
+    data = _clustering_json()
+    assert detect_measurement_type(data) == "clustering"
+
+    stats = compute_uncertainty(data)
+
+    # No Wilson interval is computed for clustering, ever: it has no
+    # entry in PAIR_EXTRACTORS at all, so this list is empty regardless
+    # of what fields the JSON contains.
+    assert stats["intervals"] == []
+    assert stats["unavailable_pairs"] == []
+
+    # The explicit, stated reason: complete enumerations, not samples.
+    assert stats["no_interval_reason"] is not None
+    assert "complete enumerations" in stats["no_interval_reason"]
+    assert "not sample estimates" in stats["no_interval_reason"]
+    assert "none were sampled" in stats["no_interval_reason"]
+
+    # The coverage-floor direction is still reported for clustering, the
+    # same way it is for every other recognized type.
+    assert stats["coverage_floor_direction"].startswith("the cluster structure reported is a floor")
+
+
+def test_clustering_no_interval_reason_appears_in_the_report():
+    data = _clustering_json()
+    stats = compute_uncertainty(data)
+    report = format_report(stats, "clustering_lobby.json")
+
+    assert "Detected measurement type: clustering" in report
+    assert "none of this measurement type's known rate pairs were available" in report
+    assert "complete enumerations" in report
+    assert "not sample estimates" in report
 
 
 def test_unrecognized_json_reported_plainly_not_a_crash():

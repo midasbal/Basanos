@@ -1,9 +1,10 @@
 """Uncertainty annotation: a standalone layer over the Basanos measurement
-modules, not an eighth measurement of its own.
+modules, not a measurement of its own.
 
-This module reads the already-written JSON output of one of the seven
+This module reads the already-written JSON output of one of the Basanos
 measurement modules (`analysis/duplication.py`, `coordination.py`,
-`synchrony.py`, `diurnal.py`, `nonce.py`, `diversity.py`, `cohort.py`) and
+`synchrony.py`, `diurnal.py`, `nonce.py`, `diversity.py`, `cohort.py`,
+`clustering.py`) and
 adds a sampling confidence interval to whichever reported rates have a
 clean integer numerator and denominator available in that file, plus a
 stated coverage-floor direction for that measurement type. It does NOT
@@ -48,6 +49,23 @@ because it backs that measurement's own headline rate -- see
 `PAIR_EXTRACTORS` below. A measurement type recognized but with none of
 its listed pairs present in the given JSON is reported as such, plainly,
 never guessed at from unrelated fields.
+
+NOT EVERY RECOGNIZED TYPE GETS AN INTERVAL AT ALL, ON PURPOSE: nonce,
+synchrony, and clustering are all recognized (so a coverage-floor
+direction is still reported for them) but deliberately have no entry in
+`PAIR_EXTRACTORS`, because none of them has a headline number that IS a
+sample proportion. nonce's bands are a four-way split, not a yes/no
+proportion. synchrony's dispersion ratios have no stored integer
+numerator/denominator pair backing them. clustering is the clearest case
+of all: its numbers (cluster counts, keys in bounded templates) are
+COMPLETE ENUMERATIONS over the captured window, not sample estimates of
+a hidden population -- every cluster in the window was counted, none
+were sampled. Computing a Wilson interval on a full enumeration would be
+false rigor: it would imply sampling uncertainty that does not exist for
+a complete count. See `NO_INTERVAL_REASONS` below, which states this
+explicitly for clustering; nonce and synchrony have no entry there and
+keep their existing generic "no rate pairs are known for this type"
+message, unchanged.
 
 Usage:
     python -m analysis.uncertainty --input <path-to-measurement.json> \\
@@ -111,6 +129,28 @@ COVERAGE_FLOOR_DIRECTIONS = {
         "the non-return rate is a floor only to the extent window 2 itself was well "
         "captured: an under-captured window 2 can only inflate apparent non-return by "
         "missing a real return, never manufacture a return that did not happen."
+    ),
+    "clustering": (
+        "the cluster structure reported is a floor: unseen evicted traffic could only ever "
+        "add another shared post to a bounded template's key set, never remove one, so the "
+        "true cluster sizes and counts are at least this concentrated, never less."
+    ),
+}
+
+# Measurement types recognized by detect_measurement_type but deliberately
+# given no entry in PAIR_EXTRACTORS, because their headline numbers are
+# not sample proportions of a hidden population and a Wilson interval on
+# them would be false rigor (see the module docstring). A type listed
+# here gets this exact reason stated in its report; a recognized type
+# with NO entry here (nonce, synchrony) falls back to the older, generic
+# "no rate pairs are known for this type" message, unchanged by this
+# table's existence.
+NO_INTERVAL_REASONS = {
+    "clustering": (
+        "clustering's numbers are complete enumerations over the captured window, not "
+        "sample estimates of a hidden population: every cluster and every key in a bounded "
+        "template was counted, none were sampled. A Wilson interval would imply sampling "
+        "uncertainty that does not exist for a complete count, so none is computed."
     ),
 }
 
@@ -248,6 +288,8 @@ def detect_measurement_type(data):
         return "diversity"
     if "persistence_rate" in data:
         return "cohort"
+    if "passes" in data and "keys_in_bounded_templates_count" in data:
+        return "clustering"
     return None
 
 
@@ -304,6 +346,13 @@ def compute_uncertainty(data, measurement_type=None, confidence=0.95):
                 }
             )
 
+    # Only set for a recognized type that has no PAIR_EXTRACTORS entry at
+    # all (extractor is None) AND has a stated reason on file -- clustering
+    # today. nonce and synchrony are also recognized-but-extractor-less,
+    # but have no entry in NO_INTERVAL_REASONS, so this stays None for
+    # them exactly as before this table existed.
+    no_interval_reason = NO_INTERVAL_REASONS.get(detected_type) if extractor is None else None
+
     if detected_type is None:
         coverage_floor_direction = "not available: measurement type not recognized from this JSON"
     else:
@@ -317,6 +366,7 @@ def compute_uncertainty(data, measurement_type=None, confidence=0.95):
         "z": z,
         "intervals": intervals,
         "unavailable_pairs": unavailable_pairs,
+        "no_interval_reason": no_interval_reason,
         "coverage_floor_direction": coverage_floor_direction,
         "note": (
             "the sampling confidence interval(s) above and the coverage-floor direction "
@@ -350,6 +400,8 @@ def format_report(stats, input_path):
     lines.append("1. Sampling confidence intervals (Wilson score, two-sided):")
     if not stats["intervals"]:
         lines.append("   none of this measurement type's known rate pairs were available in this JSON.")
+        if stats["no_interval_reason"]:
+            lines.append(f"   {stats['no_interval_reason']}")
     else:
         for entry in stats["intervals"]:
             lines.append(
