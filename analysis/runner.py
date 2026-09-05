@@ -2,6 +2,41 @@
 measurements, on comparable fixed-shape windows, archived so a real trend
 can be read back over time.
 
+THE DEFAULT SCHEDULED ROUND RUNS THE LONGITUDINAL MEASUREMENTS ONLY
+(cohort, diurnal, selfaudit), NOT the five window-dependent ones
+(duplication, coordination, nonce, clustering, diversity). Those five have
+no bounded read at all: every one of their compute functions streams and
+re-verifies the ENTIRE `messages.jsonl` for the room on every call (see
+WINDOW-DEPENDENT below), which on a real, multi-million-record file is a
+multi-hour, memory-heavy pass each -- clustering's pairwise counter over
+every bounded template being the worst of the five. Running all eight
+every round, as an earlier version of this module did, is wrong for a
+SCHEDULED job: it turns a round meant to finish in minutes into a job that
+can run for hours and risks memory pressure. The five window-dependent
+measurements are still available, but only behind the explicit
+`--include-snapshots` flag (`include_snapshots=True` to `run_once`); they
+are never part of the default path. See COST below for the honest caveat
+about the three longitudinal ones themselves.
+
+COST, STATED HONESTLY: cohort, diurnal, and selfaudit are "bounded window"
+measurements only in the sense that their OUTPUT is scoped to a fixed
+window -- each one's own compute function still streams and re-verifies
+the WHOLE `messages.jsonl` for the room every call, exactly like the five
+window-dependent ones, and only filters to the window's ts range AFTER
+that full pass (confirmed by reading each: `compute_cohort_stats`,
+`compute_diurnal_stats`, and `compute_selfaudit_stats` all loop over
+every record `_iter_json_lines(messages_path)` yields, unconditionally).
+Excluding the five window-dependent measurements from the default round
+cuts a round from 8 full-file re-verify passes to 3, which is the fix this
+revision makes -- but it does NOT make the 3 remaining passes themselves
+bounded. On a multi-million-record file, 3 full re-verify passes is far
+better than 8, but each one is still a full-file pass and can still take
+minutes, not the instant a truly windowed read would give. Making
+cohort/diurnal/selfaudit's own compute functions read only their window
+would require changing those modules, which is out of scope here (this
+revision touches only `analysis/runner.py` and its own test file); it is
+recorded here as a known remaining cost, not claimed as fixed.
+
 Read-only by construction: this module only reads a room's already-stored
 `<data-dir>/rooms/<room>/messages.jsonl`, `<data-dir>/coverage.jsonl`,
 `<data-dir>/coverage_state.json` (via `collector.coverage.CoverageTracker`),
@@ -55,13 +90,17 @@ fixed-size trailing window for them without one would mean this runner
 constructing its own filtered copy of the input files, including a
 re-baselined `coverage_state.json` -- exactly the kind of bespoke,
 measurement-adjacent reimplementation this project's modules exist to
-avoid doing quietly. So this runner takes the other option the task
-allows: it runs each of the five on the current whole file, unmodified,
-through the sibling module's own real compute function, and archives the
-result explicitly labeled `"window_kind": "snapshot"` with an `"as_of"`
-timestamp -- a point-in-time read, never presented as a comparable trend
-point. `format_history_note` below states this plainly in every such
-record.
+avoid doing quietly. So when a caller explicitly opts in
+(`--include-snapshots` / `include_snapshots=True`), this runner takes the
+other option the task allows: it runs each of the five on the current
+whole file, unmodified, through the sibling module's own real compute
+function, and archives the result explicitly labeled
+`"window_kind": "snapshot"` with an `"as_of"` timestamp -- a point-in-time
+read, never presented as a comparable trend point (`SNAPSHOT_NOTE` states
+this plainly in every such record). They are NOT run by default: a full
+re-verify pass over a real, multi-million-record file, five times every
+scheduled round, is the wrong cost to pay on a schedule meant to finish in
+minutes (see COST above).
 
 RESTART-SEAM DETECTION: a window must never straddle a collector restart,
 because a restart is where the collector's own capture continuity broke,
@@ -422,14 +461,22 @@ def run_once(
     cohort_gap_hours=DEFAULT_COHORT_GAP_HOURS,
     diurnal_span_hours=DEFAULT_DIURNAL_SPAN_HOURS,
     out_dir=None,
+    include_snapshots=False,
 ):
     """Run one scheduled round: the longitudinal measurements on their
     fixed-shape windows (skipping any that do not fit in the current
-    continuous span), then the window-dependent measurements as labeled
-    point-in-time snapshots. Archives each result and returns a summary
-    dict of what ran, what was skipped, and where each was archived --
-    the same dict `format_run_report` renders and the CLI prints, and
-    what the tests assert against directly.
+    continuous span). Archives each result and returns a summary dict of
+    what ran, what was skipped, and where each was archived -- the same
+    dict `format_run_report` renders and the CLI prints, and what the
+    tests assert against directly.
+
+    The five window-dependent measurements (duplication, coordination,
+    nonce, clustering, diversity) are NOT run by default -- each one's
+    compute function re-verifies the whole `messages.jsonl` for the room
+    with no bounded read at all, making them the wrong thing to run every
+    scheduled round (see the module docstring's COST section). Pass
+    `include_snapshots=True` to also run and archive them, each labeled
+    `"window_kind": "snapshot"`, exactly as before this revision.
 
     Read-only against every collector data file; writes only under
     `out_dir` (default `<data_dir>/analysis/history`).
@@ -549,27 +596,30 @@ def run_once(
     path = _archive_record(out_dir, "selfaudit", selfaudit_record)
     ran.append({"measurement": "selfaudit", "kind": "cumulative", "archive_path": path})
 
-    # --- window-dependent measurements: always run over the whole file,
-    # never skipped for span reasons (they have no window shape to fit
-    # into a span in the first place), always archived as a labeled
-    # snapshot, never as a trend point. ---
-    as_of_iso = (
-        _iso_from_seconds(span["span_end_seconds"])
-        if span["span_end_seconds"] is not None
-        else run_timestamp_iso
-    )
-    for name, compute_fn in _WINDOW_DEPENDENT_COMPUTE_FNS.items():
-        result = compute_fn(data_dir, room=room)
-        record = {
-            "measurement": name,
-            "run_timestamp": run_timestamp_iso,
-            "window_kind": "snapshot",
-            "as_of": as_of_iso,
-            "note": SNAPSHOT_NOTE,
-            "result": result,
-        }
-        path = _archive_record(out_dir, name, record)
-        ran.append({"measurement": name, "kind": "snapshot", "archive_path": path})
+    # --- window-dependent measurements: NOT part of the default round (see
+    # the module docstring and run_once's own docstring). Each one streams
+    # and re-verifies the whole file with no bounded read at all, which is
+    # the wrong cost to pay every scheduled round. Only run, and only
+    # archived as a labeled snapshot, never as a trend point, when the
+    # caller explicitly opts in. ---
+    if include_snapshots:
+        as_of_iso = (
+            _iso_from_seconds(span["span_end_seconds"])
+            if span["span_end_seconds"] is not None
+            else run_timestamp_iso
+        )
+        for name, compute_fn in _WINDOW_DEPENDENT_COMPUTE_FNS.items():
+            result = compute_fn(data_dir, room=room)
+            record = {
+                "measurement": name,
+                "run_timestamp": run_timestamp_iso,
+                "window_kind": "snapshot",
+                "as_of": as_of_iso,
+                "note": SNAPSHOT_NOTE,
+                "result": result,
+            }
+            path = _archive_record(out_dir, name, record)
+            ran.append({"measurement": name, "kind": "snapshot", "archive_path": path})
 
     return {
         "run_timestamp": run_timestamp_iso,
@@ -578,6 +628,7 @@ def run_once(
         "span": span,
         "ran": ran,
         "skipped": skipped,
+        "include_snapshots": include_snapshots,
     }
 
 
@@ -610,6 +661,26 @@ def format_run_report(summary):
             )
     lines.append("")
 
+    lines.append(
+        "Default scope: the longitudinal trend measurements only "
+        "(cohort, diurnal, selfaudit)."
+    )
+    if summary["include_snapshots"]:
+        lines.append(
+            "--include-snapshots was passed: the five window-dependent measurements "
+            "(duplication, coordination, nonce, clustering, diversity) also ran this round, "
+            "each a full re-verify pass over the whole file -- expensive, and archived below "
+            "as point-in-time snapshots, never as a trend."
+        )
+    else:
+        lines.append(
+            "Window-dependent snapshots (duplication, coordination, nonce, clustering, "
+            "diversity) were NOT run -- pass --include-snapshots to also run them; each is "
+            "a full re-verify pass over the whole messages.jsonl and is expensive on a large "
+            "file, so it is opt-in, never part of the default scheduled round."
+        )
+    lines.append("")
+
     lines.append(f"Ran ({len(summary['ran'])}):")
     for entry in summary["ran"]:
         lines.append(f"  {entry['measurement']} ({entry['kind']}) -> {entry['archive_path']}")
@@ -628,10 +699,12 @@ def format_run_report(summary):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        description="Run one scheduled round of the Basanos longitudinal measurements on "
-        "fixed-shape windows, and archive the window-dependent measurements as labeled "
-        "point-in-time snapshots (read-only against collector data; single-shot, not a "
-        "daemon -- schedule repeated calls externally)."
+        description="Run one scheduled round of the Basanos longitudinal measurements "
+        "(cohort, diurnal, selfaudit) on fixed-shape windows (read-only against collector "
+        "data; single-shot, not a daemon -- schedule repeated calls externally). The five "
+        "window-dependent measurements (duplication, coordination, nonce, clustering, "
+        "diversity) are expensive full-file re-verify passes and are NOT run unless "
+        "--include-snapshots is passed."
     )
     parser.add_argument("--data-dir", required=True, help="collector data directory to read")
     parser.add_argument("--room", default="lobby", help="room to analyze (default: lobby)")
@@ -659,6 +732,14 @@ def main(argv=None):
         default=None,
         help="history directory to archive into (default: <data-dir>/analysis/history)",
     )
+    parser.add_argument(
+        "--include-snapshots",
+        action="store_true",
+        help="also run and archive the five window-dependent measurements (duplication, "
+        "coordination, nonce, clustering, diversity) as labeled point-in-time snapshots. "
+        "Each is a full re-verify pass over the whole messages.jsonl and is expensive on a "
+        "large file; opt-in only, never part of the default scheduled round.",
+    )
     args = parser.parse_args(argv)
 
     summary = run_once(
@@ -668,6 +749,7 @@ def main(argv=None):
         cohort_gap_hours=args.cohort_gap_hours,
         diurnal_span_hours=args.diurnal_span_hours,
         out_dir=args.out_dir,
+        include_snapshots=args.include_snapshots,
     )
     print(format_run_report(summary))
     return 0

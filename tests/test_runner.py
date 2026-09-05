@@ -151,7 +151,9 @@ def test_runner_positions_cohort_and_diurnal_on_the_correct_fixed_windows(tmp_pa
 
     assert summary["skipped"] == []
     ran_names = {entry["measurement"] for entry in summary["ran"]}
-    assert ran_names == set(LONGITUDINAL_MEASUREMENTS) | set(WINDOW_DEPENDENT_MEASUREMENTS)
+    # default scope: longitudinal only, no window-dependent full-file passes
+    assert ran_names == set(LONGITUDINAL_MEASUREMENTS)
+    assert ran_names.isdisjoint(WINDOW_DEPENDENT_MEASUREMENTS)
 
     cohort_records = _read_jsonl(os.path.join(out_dir, "cohort.jsonl"))
     assert len(cohort_records) == 1
@@ -198,10 +200,12 @@ def test_history_files_are_append_only_across_two_runs(tmp_path):
 
     cohort_records = _read_jsonl(os.path.join(out_dir, "cohort.jsonl"))
     assert len(cohort_records) == 2
-    diversity_records = _read_jsonl(os.path.join(out_dir, "diversity.jsonl"))
-    assert len(diversity_records) == 2
+    selfaudit_records = _read_jsonl(os.path.join(out_dir, "selfaudit.jsonl"))
+    assert len(selfaudit_records) == 2
     # both runs' records are still there, in order, neither overwritten
     assert cohort_records[0]["run_timestamp"] <= cohort_records[1]["run_timestamp"]
+    # default scope never touches diversity.jsonl at all
+    assert not os.path.exists(os.path.join(out_dir, "diversity.jsonl"))
 
 
 def test_cohort_skipped_for_insufficient_span_not_run_on_a_shrunk_window(tmp_path):
@@ -234,9 +238,10 @@ def test_cohort_skipped_for_insufficient_span_not_run_on_a_shrunk_window(tmp_pat
     assert not os.path.exists(os.path.join(out_dir, "cohort.jsonl"))
     assert not os.path.exists(os.path.join(out_dir, "diurnal.jsonl"))
 
-    # window-dependent measurements have no span requirement, still run
+    # window-dependent measurements are not part of the default round at
+    # all (span-sufficient or not); selfaudit has no shape to skip
     ran_names = {entry["measurement"] for entry in summary["ran"]}
-    assert set(WINDOW_DEPENDENT_MEASUREMENTS) <= ran_names
+    assert ran_names.isdisjoint(WINDOW_DEPENDENT_MEASUREMENTS)
     assert "selfaudit" in ran_names
 
 
@@ -284,11 +289,39 @@ def test_restart_seam_is_not_straddled_by_a_window(tmp_path):
     assert _iso_to_seconds(diurnal_records[0]["window_start"]) >= BASE + 9000
 
 
-def test_window_dependent_measurements_are_archived_as_labeled_snapshots(tmp_path):
+def test_window_dependent_measurements_are_not_run_by_default(tmp_path):
     data_dir, _ = _setup_main_scenario(tmp_path)
     out_dir = os.path.join(data_dir, "analysis", "history")
 
-    run_once(data_dir, room=ROOM, cohort_window_hours=1.0, cohort_gap_hours=2.0, diurnal_span_hours=3.0, out_dir=out_dir)
+    summary = run_once(
+        data_dir, room=ROOM, cohort_window_hours=1.0, cohort_gap_hours=2.0, diurnal_span_hours=3.0, out_dir=out_dir
+    )
+
+    assert summary["include_snapshots"] is False
+    ran_names = {entry["measurement"] for entry in summary["ran"]}
+    for name in WINDOW_DEPENDENT_MEASUREMENTS:
+        assert name not in ran_names
+        assert not os.path.exists(os.path.join(out_dir, f"{name}.jsonl"))
+
+
+def test_include_snapshots_opt_in_runs_and_archives_window_dependent_as_snapshots(tmp_path):
+    data_dir, _ = _setup_main_scenario(tmp_path)
+    out_dir = os.path.join(data_dir, "analysis", "history")
+
+    summary = run_once(
+        data_dir,
+        room=ROOM,
+        cohort_window_hours=1.0,
+        cohort_gap_hours=2.0,
+        diurnal_span_hours=3.0,
+        out_dir=out_dir,
+        include_snapshots=True,
+    )
+
+    assert summary["include_snapshots"] is True
+    ran_names = {entry["measurement"] for entry in summary["ran"]}
+    assert set(WINDOW_DEPENDENT_MEASUREMENTS) <= ran_names
+    assert set(LONGITUDINAL_MEASUREMENTS) <= ran_names
 
     for name in WINDOW_DEPENDENT_MEASUREMENTS:
         records = _read_jsonl(os.path.join(out_dir, f"{name}.jsonl"))
@@ -303,6 +336,35 @@ def test_window_dependent_measurements_are_archived_as_labeled_snapshots(tmp_pat
     for name in ("cohort", "diurnal"):
         records = _read_jsonl(os.path.join(out_dir, f"{name}.jsonl"))
         assert records[0]["window_kind"] != "snapshot"
+
+
+def test_cli_include_snapshots_flag_runs_window_dependent_measurements(tmp_path):
+    from analysis.runner import main as runner_main
+
+    data_dir, _ = _setup_main_scenario(tmp_path)
+    out_dir = os.path.join(data_dir, "analysis", "history")
+
+    exit_code = runner_main(
+        [
+            "--data-dir",
+            data_dir,
+            "--room",
+            ROOM,
+            "--cohort-window-hours",
+            "1.0",
+            "--cohort-gap-hours",
+            "2.0",
+            "--diurnal-span-hours",
+            "3.0",
+            "--out-dir",
+            out_dir,
+            "--include-snapshots",
+        ]
+    )
+
+    assert exit_code == 0
+    for name in WINDOW_DEPENDENT_MEASUREMENTS:
+        assert os.path.exists(os.path.join(out_dir, f"{name}.jsonl"))
 
 
 def test_no_key_material_referenced_anywhere_in_runner_module():
@@ -355,7 +417,15 @@ def test_no_did_string_in_any_archived_record(tmp_path):
     data_dir, _ = _setup_main_scenario(tmp_path)
     out_dir = os.path.join(data_dir, "analysis", "history")
 
-    run_once(data_dir, room=ROOM, cohort_window_hours=1.0, cohort_gap_hours=2.0, diurnal_span_hours=3.0, out_dir=out_dir)
+    run_once(
+        data_dir,
+        room=ROOM,
+        cohort_window_hours=1.0,
+        cohort_gap_hours=2.0,
+        diurnal_span_hours=3.0,
+        out_dir=out_dir,
+        include_snapshots=True,
+    )
 
     for name in set(LONGITUDINAL_MEASUREMENTS) | set(WINDOW_DEPENDENT_MEASUREMENTS):
         path = os.path.join(out_dir, f"{name}.jsonl")
