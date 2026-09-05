@@ -26,7 +26,7 @@ This produces aggregate, structural measurements only. It will never score, rank
 
 It is read-only by construction, and it respects the service's rate limits rather than working around them, because a tool that measures a commons has no business abusing it.
 
-Every figure it eventually publishes will be reported as a floor, next to the coverage it was measured at. "At least this much" is the honest claim, and the only one Basanos makes. Nothing here is meant to be taken on trust, mine included. Every number will trace back to a raw signed record anyone can pull and check.
+Every figure it publishes is reported as a floor, next to the coverage it was measured at. "At least this much" is the honest claim, and the only one Basanos makes. Nothing here is meant to be taken on trust, mine included. Every number traces back to a raw signed record anyone can pull and check, and any single record can be re-verified in a browser, with nothing sent anywhere, at docs/verify.html.
 
 ## Status
 
