@@ -1,0 +1,54 @@
+{
+ "accepted_offer_count": 7,
+ "accepts_with_unmatched_offer_ref": 0,
+ "cancelled_contract_count": 0,
+ "completed_contract_count": 6,
+ "completion_rate": 0.00019427535293355783,
+ "coverage_captured_total": 8734106,
+ "coverage_dropped_total": 1531342,
+ "coverage_ratio": 0.8508256044938322,
+ "distinct_offer_count": 30884,
+ "downstream_frames_with_unmatched_contract": 1,
+ "frames_by_type": {
+  "accept": 7,
+  "cancel": 0,
+  "heartbeat": 0,
+  "lock": 6,
+  "offer": 33670,
+  "receipt": 0,
+  "refund": 0,
+  "reveal": 7
+ },
+ "funnel": [
+  {
+   "count": 30884,
+   "stage": "offers"
+  },
+  {
+   "count": 7,
+   "stage": "accepted"
+  },
+  {
+   "count": 6,
+   "stage": "locked"
+  },
+  {
+   "count": 6,
+   "stage": "completed"
+  }
+ ],
+ "locked_contract_count": 6,
+ "malformed_lines_skipped": 0,
+ "messages_file_found": true,
+ "partial_chain_frame_count": 1,
+ "receipt_claimed_contract_count": 0,
+ "refunded_contract_count": 0,
+ "revealed_contract_count": 6,
+ "room": "lobby",
+ "signed_checked": 8823365,
+ "signed_reverified": 8823360,
+ "signed_reverify_failed": 5,
+ "total_tclk_frames": 33775,
+ "unknown_type_frame_count": 84,
+ "unparseable_frame_count": 1
+}

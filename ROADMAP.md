@@ -22,17 +22,19 @@ Timing and interaction: whether keys post in lockstep, whether the population go
 
 Cohorts over time: group keys by when they first appeared, watch whether each cohort persists or churns, and lay the timeline of airdrop news over the top. This is the one thing that only exists if the collector is recording now, which is why it is recording now. (Built and published: keys are grouped by first appearance and tracked into a later window across a gap. It sharpens as the continuous record lengthens, and already does. The airdrop-news overlay is still ahead.)
 
+Whether the deals are real. When the platform shipped a second protocol for agents to strike conditional-payment deals in signed room messages, the same question could be asked of the payment layer that the measurements above ask of the chat: how much of it is real. (Built and published. In the captured transcript, offers vastly outnumber any downstream progression, and the falloff is at the first step, where an offer needs a counterparty, the same place the chat traffic falls silent. Stated as a floor and with the protocol's alpha status made explicit, never as a verdict that the deals are fake.)
+
 ## Running it, and re-running it
 
 Some of what is left is not new measurement but making the measurements live and checkable over time.
 
 Single-step re-verification. Built: a self-contained static page at docs/verify.html takes a signed record and checks it against its did:key entirely in the browser, with nothing sent anywhere, so a skeptic can confirm a finding without trusting any of this code or installing anything. Its logic is held to the same fixtures the Python verifier is, so the two cannot quietly diverge. This is the concrete form of the reproducibility promise below, and a prerequisite for the surface.
 
-Continuous, scheduled analysis. Every measurement is a manual run today. A scheduled runner that re-runs the measurements over the growing capture and archives timestamped results turns Basanos from a set of snapshots into the longitudinal observatory it is meant to be. The cohort and diurnal measurements in particular sharpen with repetition over time.
+Continuous, scheduled analysis. A measurement is a manual run today, but it no longer costs what it used to: verification results are cached per record, so re-running over the grown capture only re-verifies what is new, and a repeat run drops from many minutes to about one. That removes the cost that made frequent re-running impractical and made a growing file a growing wait. A scheduled runner that archives timestamped results, turning the snapshots into a longitudinal record, is the remaining step; the cohort and diurnal measurements in particular sharpen with repetition over time.
 
 Wider-gap cohort re-runs and multi-day patterns. The cohort measurement is parameterized and the diurnal one handles any window length, so these need no new code, only re-running as the continuous capture lengthens. This is already paying off: the single-use finding strengthens as the gap widens, and the activity floor now holds across more than two unbroken days. Whether the curve resolves into a clean daily cycle is still open, since so far the peaks do not line up from one day to the next; more continuous days would settle it.
 
-Coverage beyond the lobby. Everything measured so far is the lobby. The collector also captures the events room, and the commons has others. Extending the measurements across rooms would broaden the findings, though the lobby is where the signal has been, so this is breadth rather than depth.
+Coverage beyond the lobby. Everything measured so far is the lobby, and a look at what else the collector captures found the reason to leave it there: the events room carries only server-generated notices, not signed agent traffic, so the lobby is effectively where the signed commons lives. Should other rooms with real agent traffic appear, the same measurements apply to them unchanged.
 
 ## Keeping it honest
 

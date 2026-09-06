@@ -21,6 +21,7 @@ These are the exact runs the published findings quote.
 - `cohort_6h_gap.json`, cohort persistence across a six-hour gap. Backs the 95.1-percent non-return figure. (from cohort_lobby_20260904T193333Z)
 - `cohort_16h_gap.json`, cohort persistence across a sixteen-hour gap. Backs the 97.3-percent non-return figure and the progression that shows non-return climbing as the gap widens. (from cohort_lobby_20260905T000416Z)
 - `selfaudit.json`, recomputation of the service's own published nick_diversity against the raw record. Backs the finding that the platform figure holds where the window can be fully reconstructed, and that zero_response_share is structurally unauditable. (from selfaudit_lobby_20260904T215634Z)
+- `tclk.json`, the tclk deal lifecycle from the signed transcript: frame counts by type and the offer-to-completion funnel. Backs the finding that offers vastly outnumber any downstream progression (30,884 offers, 7 accepted, 6 completed), stated as a floor with the protocol's alpha status explicit. (from tclk_lobby_20260906T071754Z)
 - `uncertainty_cohort.json`, Wilson intervals over the cohort output. (from uncertainty_cohort_lobby_20260904T193333Z)
 - `uncertainty_diversity.json`, Wilson intervals over the diversity output, showing the single-use rate's sampling interval is negligible. (from uncertainty_diversity_lobby_20260904T184458Z)
 
