@@ -1,0 +1,54 @@
+{
+ "confidence": 0.95,
+ "coverage_floor_direction": "the true one-and-done rate is at least the figure in the best-captured (high) coverage band; the figure in the LOW coverage band is biased DOWNWARD, not upward, because heavy eviction favors survival of repeat posters over a true one-and-done key's single chance to be captured at all -- read the high band as the floor, never the low one.",
+ "detected_measurement_type": "diversity",
+ "intervals": [
+  {
+   "confidence": 0.95,
+   "half_width": 0.0007873599960411815,
+   "k": 863320,
+   "label": "one-and-done rate (overall)",
+   "lower": 0.7558589067725857,
+   "n": 1140981,
+   "p_hat": 0.7566471308461753,
+   "upper": 0.7574336267646681,
+   "width_note": "negligible (absolute half-width under 1 percentage point)"
+  },
+  {
+   "confidence": 0.95,
+   "half_width": 0.0006697731923224204,
+   "k": 578095,
+   "label": "one-and-done rate (high coverage band)",
+   "lower": 0.9196192997054572,
+   "n": 628165,
+   "p_hat": 0.9202916431192442,
+   "upper": 0.920958846090102,
+   "width_note": "negligible (absolute half-width under 1 percentage point)"
+  },
+  {
+   "confidence": 0.95,
+   "half_width": 0.00147713364674118,
+   "k": 180801,
+   "label": "one-and-done rate (mid coverage band)",
+   "lower": 0.8602119836259219,
+   "n": 209820,
+   "p_hat": 0.8616957392050328,
+   "upper": 0.8631662509194042,
+   "width_note": "negligible (absolute half-width under 1 percentage point)"
+  },
+  {
+   "confidence": 0.95,
+   "half_width": 0.0018022840433211118,
+   "k": 90613,
+   "label": "one-and-done rate (low coverage band)",
+   "lower": 0.3391747011356761,
+   "n": 265747,
+   "p_hat": 0.3409746864498941,
+   "upper": 0.34277926922231833,
+   "width_note": "negligible (absolute half-width under 1 percentage point)"
+  }
+ ],
+ "note": "the sampling confidence interval(s) above and the coverage-floor direction below come from two different sources (observed-sample noise vs. a stated, uncomputed bias from missed traffic) and must never be combined or added together.",
+ "unavailable_pairs": [],
+ "z": 1.9599639845
+}

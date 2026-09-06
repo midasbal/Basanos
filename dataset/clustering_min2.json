@@ -1,0 +1,52 @@
+{
+ "bounded_template_count": 109982,
+ "cap": 200,
+ "coverage_captured_total": 2373156,
+ "coverage_dropped_total": 313320,
+ "coverage_ratio": 0.88337137573535,
+ "distinct_keys_overall": 1140981,
+ "distinct_shared_templates": 110024,
+ "excluded_promiscuous_template_count": 42,
+ "keys_in_bounded_templates_count": 340896,
+ "malformed_lines_skipped": 0,
+ "messages_file_found": true,
+ "min_shared": 2,
+ "passes": [
+  {
+   "cluster_count": 328887,
+   "largest_cluster_size": 10850,
+   "min_shared": 2,
+   "multi_key_cluster_count": 433,
+   "singleton_count": 328454,
+   "size_histogram": {
+    "1000+": 1,
+    "11-50": 6,
+    "2": 320,
+    "201-1000": 1,
+    "3-5": 100,
+    "51-200": 1,
+    "6-10": 4
+   }
+  },
+  {
+   "cluster_count": 337793,
+   "largest_cluster_size": 1882,
+   "min_shared": 3,
+   "multi_key_cluster_count": 86,
+   "singleton_count": 337707,
+   "size_histogram": {
+    "1000+": 1,
+    "11-50": 5,
+    "2": 64,
+    "201-1000": 1,
+    "3-5": 11,
+    "51-200": 1,
+    "6-10": 3
+   }
+  }
+ ],
+ "room": "lobby",
+ "signed_checked": 2463429,
+ "signed_reverified": 2463428,
+ "signed_reverify_failed": 1
+}

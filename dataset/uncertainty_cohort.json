@@ -1,0 +1,32 @@
+{
+ "confidence": 0.95,
+ "coverage_floor_direction": "the non-return rate is a floor only to the extent window 2 itself was well captured: an under-captured window 2 can only inflate apparent non-return by missing a real return, never manufacture a return that did not happen.",
+ "detected_measurement_type": "cohort",
+ "intervals": [
+  {
+   "confidence": 0.95,
+   "half_width": 0.0015202768987079285,
+   "k": 3790,
+   "label": "persistence rate (returned)",
+   "lower": 0.04746408572997397,
+   "n": 77407,
+   "p_hat": 0.04896198018267082,
+   "upper": 0.05050463952738983,
+   "width_note": "negligible (absolute half-width under 1 percentage point)"
+  },
+  {
+   "confidence": 0.95,
+   "half_width": 0.0015202768987079285,
+   "k": 73617,
+   "label": "non-return rate",
+   "lower": 0.9494953604726102,
+   "n": 77407,
+   "p_hat": 0.9510380198173292,
+   "upper": 0.952535914270026,
+   "width_note": "negligible (absolute half-width under 1 percentage point)"
+  }
+ ],
+ "note": "the sampling confidence interval(s) above and the coverage-floor direction below come from two different sources (observed-sample noise vs. a stated, uncomputed bias from missed traffic) and must never be combined or added together.",
+ "unavailable_pairs": [],
+ "z": 1.9599639845
+}

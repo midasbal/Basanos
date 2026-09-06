@@ -1,0 +1,38 @@
+{
+ "coverage_captured_total": 4815554,
+ "coverage_dropped_total": 626567,
+ "coverage_ratio": 0.8848671317671915,
+ "malformed_lines_skipped": 0,
+ "messages_file_found": true,
+ "nick_diversity_audit": {
+  "compared_count": 6,
+  "divergence_histogram": {
+   "<0.01": 0,
+   "<0.05": 0,
+   ">=0.05": 0,
+   "exact_match": 6
+  },
+  "exact_match_count": 6,
+  "max_absolute_divergence": 0.0,
+  "mean_absolute_divergence": 0.0
+ },
+ "room": "lobby",
+ "seq_unusable_skipped": 0,
+ "signed_checked": 4905496,
+ "signed_reverified": 4905493,
+ "signed_reverify_failed": 3,
+ "snapshot_malformed_entries_skipped": 0,
+ "snapshots_file_found": true,
+ "snapshots_fully_reconstructable": 6,
+ "snapshots_skipped_incomplete_window": 635,
+ "snapshots_with_room_entry": 641,
+ "total_snapshots_seen": 641,
+ "zero_response_share_audit": {
+  "auditable": false,
+  "published_max": 0.005,
+  "published_mean": 0.005,
+  "published_min": 0.005,
+  "reason": "zero_response_share cannot be recomputed from captured data: the message schema has no reply-to, in-reply-to, or thread field, so \"response\" is not defined anywhere in what Basanos captures. This states what cannot be checked, not a claim that the published number is wrong.",
+  "snapshot_count": 641
+ }
+}

@@ -1,0 +1,572 @@
+{
+ "bins": [
+  {
+   "bin_index": 0,
+   "bin_start_ts": "2026-09-02T12:24:54.508873Z",
+   "captured_posts": 6,
+   "coverage_captured_crosscheck": 0,
+   "coverage_ratio": 1.0,
+   "estimated_dropped": 0,
+   "estimated_throughput": 6
+  },
+  {
+   "bin_index": 1,
+   "bin_start_ts": "2026-09-02T13:24:54.508873Z",
+   "captured_posts": 8,
+   "coverage_captured_crosscheck": 0,
+   "coverage_ratio": 1.0,
+   "estimated_dropped": 0,
+   "estimated_throughput": 8
+  },
+  {
+   "bin_index": 2,
+   "bin_start_ts": "2026-09-02T14:24:54.508873Z",
+   "captured_posts": 16471,
+   "coverage_captured_crosscheck": 0,
+   "coverage_ratio": 1.0,
+   "estimated_dropped": 0,
+   "estimated_throughput": 16471
+  },
+  {
+   "bin_index": 3,
+   "bin_start_ts": "2026-09-02T15:24:54.508873Z",
+   "captured_posts": 50814,
+   "coverage_captured_crosscheck": 0,
+   "coverage_ratio": 1.0,
+   "estimated_dropped": 0,
+   "estimated_throughput": 50814
+  },
+  {
+   "bin_index": 4,
+   "bin_start_ts": "2026-09-02T16:24:54.508873Z",
+   "captured_posts": 53254,
+   "coverage_captured_crosscheck": 26643,
+   "coverage_ratio": 0.7121803787311437,
+   "estimated_dropped": 21522,
+   "estimated_throughput": 74776
+  },
+  {
+   "bin_index": 5,
+   "bin_start_ts": "2026-09-02T17:24:54.508873Z",
+   "captured_posts": 69536,
+   "coverage_captured_crosscheck": 69411,
+   "coverage_ratio": 0.5590025162187583,
+   "estimated_dropped": 54857,
+   "estimated_throughput": 124393
+  },
+  {
+   "bin_index": 6,
+   "bin_start_ts": "2026-09-02T18:24:54.508873Z",
+   "captured_posts": 121948,
+   "coverage_captured_crosscheck": 122554,
+   "coverage_ratio": 0.7542973074948507,
+   "estimated_dropped": 39723,
+   "estimated_throughput": 161671
+  },
+  {
+   "bin_index": 7,
+   "bin_start_ts": "2026-09-02T19:24:54.508873Z",
+   "captured_posts": 105954,
+   "coverage_captured_crosscheck": 106419,
+   "coverage_ratio": 0.7948656393944395,
+   "estimated_dropped": 27344,
+   "estimated_throughput": 133298
+  },
+  {
+   "bin_index": 8,
+   "bin_start_ts": "2026-09-02T20:24:54.508873Z",
+   "captured_posts": 66067,
+   "coverage_captured_crosscheck": 65001,
+   "coverage_ratio": 0.8819634489847682,
+   "estimated_dropped": 8842,
+   "estimated_throughput": 74909
+  },
+  {
+   "bin_index": 9,
+   "bin_start_ts": "2026-09-02T21:24:54.508873Z",
+   "captured_posts": 69155,
+   "coverage_captured_crosscheck": 70568,
+   "coverage_ratio": 0.8966031375599637,
+   "estimated_dropped": 7975,
+   "estimated_throughput": 77130
+  },
+  {
+   "bin_index": 10,
+   "bin_start_ts": "2026-09-02T22:24:54.508873Z",
+   "captured_posts": 68656,
+   "coverage_captured_crosscheck": 67579,
+   "coverage_ratio": 0.8917521756072218,
+   "estimated_dropped": 8334,
+   "estimated_throughput": 76990
+  },
+  {
+   "bin_index": 11,
+   "bin_start_ts": "2026-09-02T23:24:54.508873Z",
+   "captured_posts": 69639,
+   "coverage_captured_crosscheck": 68804,
+   "coverage_ratio": 0.9344506467715098,
+   "estimated_dropped": 4885,
+   "estimated_throughput": 74524
+  },
+  {
+   "bin_index": 12,
+   "bin_start_ts": "2026-09-03T00:24:54.508873Z",
+   "captured_posts": 69353,
+   "coverage_captured_crosscheck": 69684,
+   "coverage_ratio": 0.9034220433259083,
+   "estimated_dropped": 7414,
+   "estimated_throughput": 76767
+  },
+  {
+   "bin_index": 13,
+   "bin_start_ts": "2026-09-03T01:24:54.508873Z",
+   "captured_posts": 65360,
+   "coverage_captured_crosscheck": 66751,
+   "coverage_ratio": 0.9528808024259389,
+   "estimated_dropped": 3232,
+   "estimated_throughput": 68592
+  },
+  {
+   "bin_index": 14,
+   "bin_start_ts": "2026-09-03T02:24:54.508873Z",
+   "captured_posts": 66367,
+   "coverage_captured_crosscheck": 65943,
+   "coverage_ratio": 0.93330052032063,
+   "estimated_dropped": 4743,
+   "estimated_throughput": 71110
+  },
+  {
+   "bin_index": 15,
+   "bin_start_ts": "2026-09-03T03:24:54.508873Z",
+   "captured_posts": 65340,
+   "coverage_captured_crosscheck": 64880,
+   "coverage_ratio": 0.968990523646394,
+   "estimated_dropped": 2091,
+   "estimated_throughput": 67431
+  },
+  {
+   "bin_index": 16,
+   "bin_start_ts": "2026-09-03T04:24:54.508873Z",
+   "captured_posts": 68977,
+   "coverage_captured_crosscheck": 69218,
+   "coverage_ratio": 0.936920172233466,
+   "estimated_dropped": 4644,
+   "estimated_throughput": 73621
+  },
+  {
+   "bin_index": 17,
+   "bin_start_ts": "2026-09-03T05:24:54.508873Z",
+   "captured_posts": 63678,
+   "coverage_captured_crosscheck": 63655,
+   "coverage_ratio": 0.9748472926011543,
+   "estimated_dropped": 1643,
+   "estimated_throughput": 65321
+  },
+  {
+   "bin_index": 18,
+   "bin_start_ts": "2026-09-03T06:24:54.508873Z",
+   "captured_posts": 76293,
+   "coverage_captured_crosscheck": 73312,
+   "coverage_ratio": 0.9315612102859655,
+   "estimated_dropped": 5605,
+   "estimated_throughput": 81898
+  },
+  {
+   "bin_index": 19,
+   "bin_start_ts": "2026-09-03T07:24:54.508873Z",
+   "captured_posts": 130511,
+   "coverage_captured_crosscheck": 132073,
+   "coverage_ratio": 0.9107155317990873,
+   "estimated_dropped": 12795,
+   "estimated_throughput": 143306
+  },
+  {
+   "bin_index": 20,
+   "bin_start_ts": "2026-09-03T08:24:54.508873Z",
+   "captured_posts": 125025,
+   "coverage_captured_crosscheck": 123203,
+   "coverage_ratio": 0.8815006486547464,
+   "estimated_dropped": 16807,
+   "estimated_throughput": 141832
+  },
+  {
+   "bin_index": 21,
+   "bin_start_ts": "2026-09-03T09:24:54.508873Z",
+   "captured_posts": 122319,
+   "coverage_captured_crosscheck": 122759,
+   "coverage_ratio": 0.8782741685335171,
+   "estimated_dropped": 16953,
+   "estimated_throughput": 139272
+  },
+  {
+   "bin_index": 22,
+   "bin_start_ts": "2026-09-03T10:24:54.508873Z",
+   "captured_posts": 125916,
+   "coverage_captured_crosscheck": 126423,
+   "coverage_ratio": 0.9276058433952395,
+   "estimated_dropped": 9827,
+   "estimated_throughput": 135743
+  },
+  {
+   "bin_index": 23,
+   "bin_start_ts": "2026-09-03T11:24:54.508873Z",
+   "captured_posts": 91065,
+   "coverage_captured_crosscheck": 92626,
+   "coverage_ratio": 0.9324125079352078,
+   "estimated_dropped": 6601,
+   "estimated_throughput": 97666
+  },
+  {
+   "bin_index": 24,
+   "bin_start_ts": "2026-09-03T12:24:54.508873Z",
+   "captured_posts": 83398,
+   "coverage_captured_crosscheck": 81754,
+   "coverage_ratio": 0.9486963643809437,
+   "estimated_dropped": 4510,
+   "estimated_throughput": 87908
+  },
+  {
+   "bin_index": 25,
+   "bin_start_ts": "2026-09-03T13:24:54.508873Z",
+   "captured_posts": 97532,
+   "coverage_captured_crosscheck": 99647,
+   "coverage_ratio": 0.9173524957909687,
+   "estimated_dropped": 8787,
+   "estimated_throughput": 106319
+  },
+  {
+   "bin_index": 26,
+   "bin_start_ts": "2026-09-03T14:24:54.508873Z",
+   "captured_posts": 82342,
+   "coverage_captured_crosscheck": 81369,
+   "coverage_ratio": 0.9294203961848863,
+   "estimated_dropped": 6253,
+   "estimated_throughput": 88595
+  },
+  {
+   "bin_index": 27,
+   "bin_start_ts": "2026-09-03T15:24:54.508873Z",
+   "captured_posts": 87878,
+   "coverage_captured_crosscheck": 89229,
+   "coverage_ratio": 0.9249342174507946,
+   "estimated_dropped": 7132,
+   "estimated_throughput": 95010
+  },
+  {
+   "bin_index": 28,
+   "bin_start_ts": "2026-09-03T16:24:54.508873Z",
+   "captured_posts": 92154,
+   "coverage_captured_crosscheck": 90197,
+   "coverage_ratio": 0.9681364051813798,
+   "estimated_dropped": 3033,
+   "estimated_throughput": 95187
+  },
+  {
+   "bin_index": 29,
+   "bin_start_ts": "2026-09-03T17:24:54.508873Z",
+   "captured_posts": 92526,
+   "coverage_captured_crosscheck": 96653,
+   "coverage_ratio": 0.9503687421680806,
+   "estimated_dropped": 4832,
+   "estimated_throughput": 97358
+  },
+  {
+   "bin_index": 30,
+   "bin_start_ts": "2026-09-03T18:24:54.508873Z",
+   "captured_posts": 79991,
+   "coverage_captured_crosscheck": 80092,
+   "coverage_ratio": 0.9393576419470377,
+   "estimated_dropped": 5164,
+   "estimated_throughput": 85155
+  },
+  {
+   "bin_index": 31,
+   "bin_start_ts": "2026-09-03T19:24:54.508873Z",
+   "captured_posts": 72953,
+   "coverage_captured_crosscheck": 73327,
+   "coverage_ratio": 0.916690750537175,
+   "estimated_dropped": 6630,
+   "estimated_throughput": 79583
+  },
+  {
+   "bin_index": 32,
+   "bin_start_ts": "2026-09-03T20:24:54.508873Z",
+   "captured_posts": 69001,
+   "coverage_captured_crosscheck": 68498,
+   "coverage_ratio": 0.9320680805079022,
+   "estimated_dropped": 5029,
+   "estimated_throughput": 74030
+  },
+  {
+   "bin_index": 33,
+   "bin_start_ts": "2026-09-03T21:24:54.508873Z",
+   "captured_posts": 60384,
+   "coverage_captured_crosscheck": 58617,
+   "coverage_ratio": 0.9356348197960891,
+   "estimated_dropped": 4154,
+   "estimated_throughput": 64538
+  },
+  {
+   "bin_index": 34,
+   "bin_start_ts": "2026-09-03T22:24:54.508873Z",
+   "captured_posts": 61233,
+   "coverage_captured_crosscheck": 58300,
+   "coverage_ratio": 0.9016919701365063,
+   "estimated_dropped": 6676,
+   "estimated_throughput": 67909
+  },
+  {
+   "bin_index": 35,
+   "bin_start_ts": "2026-09-03T23:24:54.508873Z",
+   "captured_posts": 46965,
+   "coverage_captured_crosscheck": 49575,
+   "coverage_ratio": 0.9216594383499813,
+   "estimated_dropped": 3992,
+   "estimated_throughput": 50957
+  },
+  {
+   "bin_index": 36,
+   "bin_start_ts": "2026-09-04T00:24:54.508873Z",
+   "captured_posts": 55560,
+   "coverage_captured_crosscheck": 53813,
+   "coverage_ratio": 0.9214235961391755,
+   "estimated_dropped": 4738,
+   "estimated_throughput": 60298
+  },
+  {
+   "bin_index": 37,
+   "bin_start_ts": "2026-09-04T01:24:54.508873Z",
+   "captured_posts": 54218,
+   "coverage_captured_crosscheck": 54412,
+   "coverage_ratio": 0.9452396310953817,
+   "estimated_dropped": 3141,
+   "estimated_throughput": 57359
+  },
+  {
+   "bin_index": 38,
+   "bin_start_ts": "2026-09-04T02:24:54.508873Z",
+   "captured_posts": 99194,
+   "coverage_captured_crosscheck": 94730,
+   "coverage_ratio": 0.8815677212939922,
+   "estimated_dropped": 13326,
+   "estimated_throughput": 112520
+  },
+  {
+   "bin_index": 39,
+   "bin_start_ts": "2026-09-04T03:24:54.508873Z",
+   "captured_posts": 125068,
+   "coverage_captured_crosscheck": 123969,
+   "coverage_ratio": 0.8781570133617935,
+   "estimated_dropped": 17353,
+   "estimated_throughput": 142421
+  },
+  {
+   "bin_index": 40,
+   "bin_start_ts": "2026-09-04T04:24:54.508873Z",
+   "captured_posts": 122225,
+   "coverage_captured_crosscheck": 121482,
+   "coverage_ratio": 0.924860958722712,
+   "estimated_dropped": 9930,
+   "estimated_throughput": 132155
+  },
+  {
+   "bin_index": 41,
+   "bin_start_ts": "2026-09-04T05:24:54.508873Z",
+   "captured_posts": 131209,
+   "coverage_captured_crosscheck": 131912,
+   "coverage_ratio": 0.9045527872378563,
+   "estimated_dropped": 13845,
+   "estimated_throughput": 145054
+  },
+  {
+   "bin_index": 42,
+   "bin_start_ts": "2026-09-04T06:24:54.508873Z",
+   "captured_posts": 115045,
+   "coverage_captured_crosscheck": 117131,
+   "coverage_ratio": 0.8436796444731265,
+   "estimated_dropped": 21316,
+   "estimated_throughput": 136361
+  },
+  {
+   "bin_index": 43,
+   "bin_start_ts": "2026-09-04T07:24:54.508873Z",
+   "captured_posts": 86178,
+   "coverage_captured_crosscheck": 87325,
+   "coverage_ratio": 0.9384003920074045,
+   "estimated_dropped": 5657,
+   "estimated_throughput": 91835
+  },
+  {
+   "bin_index": 44,
+   "bin_start_ts": "2026-09-04T08:24:54.508873Z",
+   "captured_posts": 76416,
+   "coverage_captured_crosscheck": 75491,
+   "coverage_ratio": 0.9173699564220459,
+   "estimated_dropped": 6883,
+   "estimated_throughput": 83299
+  },
+  {
+   "bin_index": 45,
+   "bin_start_ts": "2026-09-04T09:24:54.508873Z",
+   "captured_posts": 102210,
+   "coverage_captured_crosscheck": 102240,
+   "coverage_ratio": 0.872731930154122,
+   "estimated_dropped": 14905,
+   "estimated_throughput": 117115
+  },
+  {
+   "bin_index": 46,
+   "bin_start_ts": "2026-09-04T10:24:54.508873Z",
+   "captured_posts": 95241,
+   "coverage_captured_crosscheck": 95382,
+   "coverage_ratio": 0.9242033148313473,
+   "estimated_dropped": 7811,
+   "estimated_throughput": 103052
+  },
+  {
+   "bin_index": 47,
+   "bin_start_ts": "2026-09-04T11:24:54.508873Z",
+   "captured_posts": 94312,
+   "coverage_captured_crosscheck": 93922,
+   "coverage_ratio": 0.8810006445525964,
+   "estimated_dropped": 12739,
+   "estimated_throughput": 107051
+  },
+  {
+   "bin_index": 48,
+   "bin_start_ts": "2026-09-04T12:24:54.508873Z",
+   "captured_posts": 88992,
+   "coverage_captured_crosscheck": 89555,
+   "coverage_ratio": 0.9366790165038733,
+   "estimated_dropped": 6016,
+   "estimated_throughput": 95008
+  },
+  {
+   "bin_index": 49,
+   "bin_start_ts": "2026-09-04T13:24:54.508873Z",
+   "captured_posts": 92987,
+   "coverage_captured_crosscheck": 91732,
+   "coverage_ratio": 0.9026023820386135,
+   "estimated_dropped": 10034,
+   "estimated_throughput": 103021
+  },
+  {
+   "bin_index": 50,
+   "bin_start_ts": "2026-09-04T14:24:54.508873Z",
+   "captured_posts": 97539,
+   "coverage_captured_crosscheck": 99600,
+   "coverage_ratio": 0.8578929777652687,
+   "estimated_dropped": 16157,
+   "estimated_throughput": 113696
+  },
+  {
+   "bin_index": 51,
+   "bin_start_ts": "2026-09-04T15:24:54.508873Z",
+   "captured_posts": 98518,
+   "coverage_captured_crosscheck": 97349,
+   "coverage_ratio": 0.8198901464713715,
+   "estimated_dropped": 21642,
+   "estimated_throughput": 120160
+  },
+  {
+   "bin_index": 52,
+   "bin_start_ts": "2026-09-04T16:24:54.508873Z",
+   "captured_posts": 129747,
+   "coverage_captured_crosscheck": 126962,
+   "coverage_ratio": 0.8496022001767999,
+   "estimated_dropped": 22968,
+   "estimated_throughput": 152715
+  },
+  {
+   "bin_index": 53,
+   "bin_start_ts": "2026-09-04T17:24:54.508873Z",
+   "captured_posts": 123889,
+   "coverage_captured_crosscheck": 124341,
+   "coverage_ratio": 0.841448588292027,
+   "estimated_dropped": 23344,
+   "estimated_throughput": 147233
+  },
+  {
+   "bin_index": 54,
+   "bin_start_ts": "2026-09-04T18:24:54.508873Z",
+   "captured_posts": 119635,
+   "coverage_captured_crosscheck": 120727,
+   "coverage_ratio": 0.8594530133118773,
+   "estimated_dropped": 19564,
+   "estimated_throughput": 139199
+  },
+  {
+   "bin_index": 55,
+   "bin_start_ts": "2026-09-04T19:24:54.508873Z",
+   "captured_posts": 122132,
+   "coverage_captured_crosscheck": 121812,
+   "coverage_ratio": 0.8723776598404275,
+   "estimated_dropped": 17867,
+   "estimated_throughput": 139999
+  },
+  {
+   "bin_index": 56,
+   "bin_start_ts": "2026-09-04T20:24:54.508873Z",
+   "captured_posts": 122574,
+   "coverage_captured_crosscheck": 123138,
+   "coverage_ratio": 0.8879085535465925,
+   "estimated_dropped": 15474,
+   "estimated_throughput": 138048
+  },
+  {
+   "bin_index": 57,
+   "bin_start_ts": "2026-09-04T21:24:54.508873Z",
+   "captured_posts": 115034,
+   "coverage_captured_crosscheck": 118824,
+   "coverage_ratio": 0.8629513214256244,
+   "estimated_dropped": 18269,
+   "estimated_throughput": 133303
+  },
+  {
+   "bin_index": 58,
+   "bin_start_ts": "2026-09-04T22:24:54.508873Z",
+   "captured_posts": 115541,
+   "coverage_captured_crosscheck": 112035,
+   "coverage_ratio": 0.8962363673032471,
+   "estimated_dropped": 13377,
+   "estimated_throughput": 128918
+  },
+  {
+   "bin_index": 59,
+   "bin_start_ts": "2026-09-04T23:24:54.508873Z",
+   "captured_posts": 118566,
+   "coverage_captured_crosscheck": 116881,
+   "coverage_ratio": 0.8766562167277889,
+   "estimated_dropped": 16682,
+   "estimated_throughput": 135248
+  },
+  {
+   "bin_index": 60,
+   "bin_start_ts": "2026-09-05T00:24:54.508873Z",
+   "captured_posts": 5326,
+   "coverage_captured_crosscheck": 11027,
+   "coverage_ratio": 0.8416561314791403,
+   "estimated_dropped": 1002,
+   "estimated_throughput": 6328
+  }
+ ],
+ "bucket_seconds": 3600.0,
+ "captured_shape_ratio": 21868.166666666668,
+ "coverage_file_found": true,
+ "coverage_malformed_lines_skipped": 0,
+ "malformed_lines_skipped": 0,
+ "max_captured_in_a_bin": 131209,
+ "messages_file_found": true,
+ "min_captured_in_a_bin": 6,
+ "num_bins": 61,
+ "overall_coverage_ratio": 0.8863653191490087,
+ "restart_intervals_skipped": 0,
+ "room": "lobby",
+ "signed_checked": 5195428,
+ "signed_reverified": 5195425,
+ "signed_reverify_failed": 3,
+ "total_captured_posts": 5195425,
+ "total_estimated_dropped": 666069,
+ "ts_unparsable_skipped": 0,
+ "window_span_seconds": 216184.99575901031
+}
