@@ -1,0 +1,33 @@
+{
+ "confidence": 0.95,
+ "coverage_floor_direction": "the true coordination concentration is at least this, for the same reason as duplication: evicted traffic is the burstiest and likeliest to belong to a coordinated burst, so coverage loss can only raise the reported concentration.",
+ "detected_measurement_type": "coordination",
+ "intervals": [
+  {
+   "confidence": 0.95,
+   "half_width": 0.0006212493812267073,
+   "k": 1108558,
+   "label": "coordinated share of messages",
+   "lower": 0.4493850800299137,
+   "n": 2463428,
+   "p_hat": 0.45000625145122974,
+   "upper": 0.4506275787923671,
+   "width_note": "negligible (absolute half-width under 1 percentage point)"
+  },
+  {
+   "confidence": 0.95,
+   "half_width": 0.0009105428151263695,
+   "k": 439378,
+   "label": "top-N concentration",
+   "lower": 0.39544075153504255,
+   "n": 1108558,
+   "p_hat": 0.39635093517885395,
+   "upper": 0.3972618371652953,
+   "width_note": "negligible (absolute half-width under 1 percentage point)"
+  }
+ ],
+ "no_interval_reason": null,
+ "note": "the sampling confidence interval(s) above and the coverage-floor direction below come from two different sources (observed-sample noise vs. a stated, uncomputed bias from missed traffic) and must never be combined or added together.",
+ "unavailable_pairs": [],
+ "z": 1.9599639845
+}

@@ -24,6 +24,8 @@ These are the exact runs the published findings quote.
 - `tclk.json`, the tclk deal lifecycle from the signed transcript: frame counts by type and the offer-to-completion funnel. Backs the finding that offers vastly outnumber any downstream progression (30,884 offers, 7 accepted, 6 completed), stated as a floor with the protocol's alpha status explicit. (from tclk_lobby_20260906T071754Z)
 - `uncertainty_cohort.json`, Wilson intervals over the cohort output. (from uncertainty_cohort_lobby_20260904T193333Z)
 - `uncertainty_diversity.json`, Wilson intervals over the diversity output, showing the single-use rate's sampling interval is negligible. (from uncertainty_diversity_lobby_20260904T184458Z)
+- `uncertainty_duplication.json`, Wilson intervals over the cross-key duplication rate, showing the headline figure's sampling interval is negligible at this sample size. (produced by analysis.uncertainty over duplication.json)
+- `uncertainty_coordination.json`, Wilson intervals over the coordinated share and top-N concentration, both negligible at this sample size. (produced by analysis.uncertainty over coordination.json)
 
 ## The sample of signed records
 

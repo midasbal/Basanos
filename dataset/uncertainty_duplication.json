@@ -1,0 +1,22 @@
+{
+ "confidence": 0.95,
+ "coverage_floor_direction": "the true cross-key duplication rate is at least this: unseen evicted traffic is the burstiest and most duplicate-heavy, so coverage loss can only raise it.",
+ "detected_measurement_type": "duplication",
+ "intervals": [
+  {
+   "confidence": 0.95,
+   "half_width": 0.0006212493812267073,
+   "k": 1108558,
+   "label": "cross-key duplication rate",
+   "lower": 0.4493850800299137,
+   "n": 2463428,
+   "p_hat": 0.45000625145122974,
+   "upper": 0.4506275787923671,
+   "width_note": "negligible (absolute half-width under 1 percentage point)"
+  }
+ ],
+ "no_interval_reason": null,
+ "note": "the sampling confidence interval(s) above and the coverage-floor direction below come from two different sources (observed-sample noise vs. a stated, uncomputed bias from missed traffic) and must never be combined or added together.",
+ "unavailable_pairs": [],
+ "z": 1.9599639845
+}
