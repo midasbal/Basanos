@@ -143,6 +143,24 @@ Where the full two-hundred-message window was captured, the published figure hol
 
 The more telling figure is one that cannot be recomputed at all. The service also publishes a zero response share, the fraction of messages that receive no response, and reports it as 0.005, so that by its own account 99.5 percent of messages are responded to. This cannot be audited, because response is not defined anywhere in the captured data: as the previous measurement found, the message format has no reply field and messages almost never address one another. A response metric requires a notion of response, and the protocol does not carry one. So this is not a claim that the number is wrong, it is the observation that the number describes an interaction the data does not contain. It is also, across all six hundred forty-one snapshots spanning the whole capture, perfectly constant at 0.005, never varying by so much as a thousandth.
 
+## Measurement 9: whether the deals are real
+
+Late in the capture period, FLOP Labs published a second protocol, [tclk](https://github.com/flop-labs/tclk), a way for two agents who meet in a room to strike a conditional-payment deal, an offer, an acceptance, a lock, and a reveal, using nothing but signed room messages. The money settles on an external rail; the room carries only the coordination. Because the deal frames are ordinary signed messages, they land in the same captured transcript as everything else, and the same question this whole document asks about chat can be asked about payments: how much of it is real.
+
+A tclk frame is a message whose text begins with the six characters `tclk1 `, followed by a small JSON object naming its type. A deal starts with an `offer`; a counterparty replies with an `accept`; the payer posts a `lock`; the payee posts a `reveal` to claim. Each stage is linked to the last by a contract identifier, so a deal can be followed through the transcript from proposal to completion.
+
+In the captured record there are 30,884 distinct offers. Seven of them were accepted. Six reached a reveal. The drop is almost entirely at the first step: nearly every offer is posted and then meets no counterparty at all. This is the same shape the earlier measurements found in the chat, seen now in the payment layer. A room where keys mostly post once and never address one another is a room where an offer has almost no one to accept it, and that is what the funnel shows.
+
+This is the strongest-looking number in the document, so it is the one to state most carefully, and there are three reasons it must be read as a floor and a description of the transcript, never as a verdict that the deals are fake.
+
+First, coverage. The transcript is captured at about 85 percent for this measurement, so an acceptance or a reveal could sit in the traffic the collector never saw. A missing completing frame makes a real deal look stalled, so the true completion count can only be higher than what is seen here, never lower.
+
+Second, the room is not the settlement. tclk settles on an external rail and uses the room only to coordinate. A deal could be accepted and settled entirely off the room, leaving only its opening offer in the transcript. So an offer with no visible acceptance is a statement about what the transcript records, not about what did or did not happen between two agents elsewhere.
+
+Third, and most important, tclk is alpha. At the time of this measurement it ships one settlement rail that holds no value at all, by design, so that the choreography can be rehearsed before a rail that moves money exists. During this period no deal could complete in the sense of moving funds, because there was nothing for a rail to move. A low completion rate measured while completion is not yet possible is exactly what a brand-new protocol looks like in its first days, and it should be read that way.
+
+So the honest finding is narrow and it is not an accusation: in the captured transcript, offers vastly outnumber any downstream progression, and the falloff happens at the moment an offer needs a counterparty, which is the same place the chat traffic falls silent. Whether that changes as the protocol leaves alpha and a real rail exists is a question the same measurement will answer later, on its own, as the record grows.
+
 ## What is not claimed
 
 Change over time is only partly answered. Whether the gap between verified and real is growing, shrinking, or steady is the question Basanos exists to answer in full, and the two nested windows here cannot answer it, since they are not comparable as a time series. What can be said now comes from measurements taken within continuous capture: the single-use rate holds across widening gaps, and the activity floor holds across more than two unbroken days. A confirmed long-run trend still needs windows captured continuously across known, non-overlapping spans, which continued collection is accumulating.
