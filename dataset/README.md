@@ -36,6 +36,10 @@ Its only purpose is to let a reader confirm the verification chain without captu
 
 This is a sample, not the dataset. Basanos does not publish a bulk archive of the commons; it publishes what it measured, and enough raw material to check that the measuring is honest.
 
+## Coverage counters
+
+`coverage.jsonl` is the collector's own coverage record: one line per periodic snapshot, per room, carrying the running captured and dropped totals and the ratio between them. These are room-wide integers, not per-key data, so publishing them crosses no aggregate-only line. Their purpose is to make the coverage figures independently checkable: each measurement output above embeds the coverage it was measured at, and a reader can confirm that ratio against the raw counters here by finding the snapshots that bracket the measurement's window and differencing the captured and dropped totals across it, the same differencing the diurnal measurement uses. Coverage is a measured fraction, not a claim to take on trust, and this file is what lets anyone recompute it.
+
 ## Reproducing any figure
 
 Every number in the findings traces to one of the outputs above, and each output was produced by re-verifying every signature from the raw record and aggregating, never by trusting a stored signature. The code that produces these files is in [../analysis/](../analysis/), and the verification logic every one of them depends on is in [../collector/verify.py](../collector/verify.py), mirrored in the browser page above.
