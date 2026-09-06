@@ -70,6 +70,7 @@ import re
 from datetime import datetime, timezone
 
 from collector.verify import MalformedRecord, UnsupportedKeyType, is_signed, verify_record
+from collector.verify_cache import append_verify_cache_entries, cached_verify, load_verify_cache
 
 CAVEAT = (
     "some rooms may intend heartbeat-style posting, so this is a statement "
@@ -228,7 +229,7 @@ def _difference_coverage_records(records):
     return intervals, restarts_skipped
 
 
-def compute_cohort_stats(data_dir, room, w1_start, w1_end, w2_start, w2_end):
+def compute_cohort_stats(data_dir, room, w1_start, w1_end, w2_start, w2_end, use_verify_cache=True):
     """Stream `<data_dir>/rooms/<room>/messages.jsonl` and
     `<data_dir>/coverage.jsonl` and compute cohort persistence: of the
     keys whose first-ever appearance falls in window 1, the fraction that
@@ -236,16 +237,25 @@ def compute_cohort_stats(data_dir, room, w1_start, w1_end, w2_start, w2_end):
 
     `w1_start`, `w1_end`, `w2_start`, `w2_end` are epoch seconds (floats),
     already parsed from ISO-8601 UTC by the caller (`main`, below, via
-    `_parse_ts_seconds`). Returns a dict with the raw counters and
-    aggregates needed by both the human-readable report and the JSON
-    output. Reads only; writes nothing. No did:key string appears
-    anywhere in the returned structure -- keys are only ever counted,
-    never named.
+    `_parse_ts_seconds`). `use_verify_cache` (default True) routes
+    re-verification through `collector.verify_cache`'s seq+hash cache,
+    which never changes which records are read, counted, or how many
+    re-verify. Pass False to force full verification, bypassing the cache
+    entirely.
+
+    Returns a dict with the raw counters and aggregates needed by both the
+    human-readable report and the JSON output. Reads only; writes nothing
+    except (when `use_verify_cache` is True) newly confirmed entries to
+    this room's verify cache. No did:key string appears anywhere in the
+    returned structure -- keys are only ever counted, never named.
     """
     _validate_room(room)
     _validate_windows(w1_start, w1_end, w2_start, w2_end)
     messages_path = os.path.join(data_dir, "rooms", room, "messages.jsonl")
     coverage_path = os.path.join(data_dir, "coverage.jsonl")
+
+    verify_cache = load_verify_cache(data_dir, room) if use_verify_cache else {}
+    new_cache_entries = []
 
     checked = 0
     verified = 0
@@ -267,7 +277,7 @@ def compute_cohort_stats(data_dir, room, w1_start, w1_end, w2_start, w2_end):
                 continue  # unsigned nicks are excluded from the population entirely
             checked += 1
             try:
-                ok = verify_record(record)
+                ok = cached_verify(record, verify_cache, new_cache_entries)
             except (UnsupportedKeyType, MalformedRecord, KeyError, TypeError):
                 # TypeError covers a non-string sig (e.g. a bare number or a
                 # JSON array/object): verify.py does base64 decoding on sig,
@@ -326,6 +336,9 @@ def compute_cohort_stats(data_dir, room, w1_start, w1_end, w2_start, w2_end):
 
     w2_denominator = w2_captured_total + w2_dropped_total
     w2_coverage_ratio = (w2_captured_total / w2_denominator) if w2_denominator else None
+
+    if use_verify_cache:
+        append_verify_cache_entries(data_dir, room, new_cache_entries)
 
     return {
         "room": room,

@@ -103,6 +103,7 @@ from datetime import datetime, timezone
 
 from collector.coverage import CoverageTracker
 from collector.verify import MalformedRecord, UnsupportedKeyType, is_signed, verify_record
+from collector.verify_cache import append_verify_cache_entries, cached_verify, load_verify_cache
 
 FRAME_PREFIX = "tclk1 "
 
@@ -189,20 +190,30 @@ def _parse_frame(text):
     return parsed
 
 
-def compute_tclk_stats(data_dir, room="lobby"):
+def compute_tclk_stats(data_dir, room="lobby", use_verify_cache=True):
     """Stream `<data_dir>/rooms/<room>/messages.jsonl` and compute the
     tclk/1 deal-lifecycle funnel: how many offers are posted, how many
     are accepted, and how many of those reach lock, reveal, refund, or
     cancel, plus the completion count and rate.
 
+    `use_verify_cache` (default True) routes re-verification through
+    `collector.verify_cache`'s seq+hash cache, which never changes which
+    records are read, counted, or how many re-verify. Pass False to force
+    full verification, bypassing the cache entirely.
+
     Returns a dict with the raw counters and aggregates needed by both the
-    human-readable report and the JSON output. Reads only; writes nothing.
-    No did:key string, and no individual offer id, contract id, or ref, is
-    ever in the returned structure -- every number below is a count or a
-    rate over frames or contracts, never a name.
+    human-readable report and the JSON output. Reads only; writes nothing
+    except (when `use_verify_cache` is True) newly confirmed entries to
+    this room's verify cache. No did:key string, and no individual offer
+    id, contract id, or ref, is ever in the returned structure -- every
+    number below is a count or a rate over frames or contracts, never a
+    name.
     """
     _validate_room(room)
     messages_path = os.path.join(data_dir, "rooms", room, "messages.jsonl")
+
+    verify_cache = load_verify_cache(data_dir, room) if use_verify_cache else {}
+    new_cache_entries = []
 
     checked = 0
     verified = 0
@@ -239,7 +250,7 @@ def compute_tclk_stats(data_dir, room="lobby"):
                 continue  # unsigned nicks are excluded from the population entirely
             checked += 1
             try:
-                ok = verify_record(record)
+                ok = cached_verify(record, verify_cache, new_cache_entries)
             except (UnsupportedKeyType, MalformedRecord, KeyError, TypeError):
                 # TypeError covers a non-string sig (e.g. a bare number or a
                 # JSON array/object): verify.py does base64 decoding on sig,
@@ -348,6 +359,9 @@ def compute_tclk_stats(data_dir, room="lobby"):
     coverage_ratio = CoverageTracker.coverage_ratio(
         coverage.get("captured_total", 0), coverage.get("dropped_total", 0)
     )
+
+    if use_verify_cache:
+        append_verify_cache_entries(data_dir, room, new_cache_entries)
 
     return {
         "room": room,

@@ -58,6 +58,7 @@ import re
 from datetime import datetime, timezone
 
 from collector.verify import MalformedRecord, UnsupportedKeyType, is_signed, verify_record
+from collector.verify_cache import append_verify_cache_entries, cached_verify, load_verify_cache
 
 DEFAULT_BUCKET_SECONDS = 3600.0
 
@@ -214,20 +215,29 @@ def _bin_index(ts, earliest, bucket_seconds, bin_count):
     return max(0, min(idx, bin_count - 1))
 
 
-def compute_diurnal_stats(data_dir, room="lobby", bucket_seconds=DEFAULT_BUCKET_SECONDS):
+def compute_diurnal_stats(data_dir, room="lobby", bucket_seconds=DEFAULT_BUCKET_SECONDS, use_verify_cache=True):
     """Stream `<data_dir>/rooms/<room>/messages.jsonl` and
     `<data_dir>/coverage.jsonl` and compute the room's activity curve:
     captured posts and estimated dropped posts per absolute-time bin,
     plus the aggregate shape of the curve.
 
+    `use_verify_cache` (default True) routes re-verification through
+    `collector.verify_cache`'s seq+hash cache, which never changes which
+    records are read, counted, or how many re-verify. Pass False to force
+    full verification, bypassing the cache entirely.
+
     Returns a dict with the raw counters and aggregates needed by both the
-    human-readable report and the JSON output. Reads only; writes nothing.
-    No did:key string appears anywhere in the returned structure -- keys
-    are only ever counted, never named.
+    human-readable report and the JSON output. Reads only; writes nothing
+    except (when `use_verify_cache` is True) newly confirmed entries to
+    this room's verify cache. No did:key string appears anywhere in the
+    returned structure -- keys are only ever counted, never named.
     """
     _validate_room(room)
     messages_path = os.path.join(data_dir, "rooms", room, "messages.jsonl")
     coverage_path = os.path.join(data_dir, "coverage.jsonl")
+
+    verify_cache = load_verify_cache(data_dir, room) if use_verify_cache else {}
+    new_cache_entries = []
 
     checked = 0
     verified = 0
@@ -246,7 +256,7 @@ def compute_diurnal_stats(data_dir, room="lobby", bucket_seconds=DEFAULT_BUCKET_
                 continue  # unsigned nicks are excluded from the population entirely
             checked += 1
             try:
-                ok = verify_record(record)
+                ok = cached_verify(record, verify_cache, new_cache_entries)
             except (UnsupportedKeyType, MalformedRecord, KeyError, TypeError):
                 # TypeError covers a non-string sig (e.g. a bare number or a
                 # JSON array/object): verify.py does base64 decoding on sig,
@@ -336,6 +346,9 @@ def compute_diurnal_stats(data_dir, room="lobby", bucket_seconds=DEFAULT_BUCKET_
         shape_ratio = None
 
     window_span_seconds = (max(ts_values) - min(ts_values)) if ts_values else None
+
+    if use_verify_cache:
+        append_verify_cache_entries(data_dir, room, new_cache_entries)
 
     return {
         "room": room,
