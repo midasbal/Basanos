@@ -82,7 +82,7 @@ cd /opt/basanos/Basanos
 sudo -u basanos /opt/basanos/Basanos/.venv/bin/python -m pytest tests/ -v
 ```
 
-All tests should pass (99 at the time of writing). This only exercises
+All tests should pass (the suite is several hundred tests and grows with each measurement; the exact count is whatever the current checkout reports). This only exercises
 the collector's own logic against fixtures -- it makes no network calls
 and touches nothing outside a pytest tmp_path, so it's safe to run as
 the unprivileged service user before the data directory even exists.
