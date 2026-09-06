@@ -279,6 +279,152 @@ def test_clustering_is_recognized_as_a_no_interval_measurement_type():
     assert stats["coverage_floor_direction"].startswith("the cluster structure reported is a floor")
 
 
+def _tclk_json():
+    # A real-shaped tclk.py output, matching FINDINGS.md's own tclk
+    # numbers: 30,884 distinct offers, 7 accepted, 6 completed. The
+    # sentinel fields detect_measurement_type looks for are
+    # total_tclk_frames and distinct_offer_count.
+    return {
+        "room": "lobby",
+        "messages_file_found": True,
+        "signed_checked": 40000,
+        "signed_reverified": 39990,
+        "signed_reverify_failed": 10,
+        "malformed_lines_skipped": 0,
+        "total_tclk_frames": 30897,
+        "frames_by_type": {
+            "offer": 30884,
+            "accept": 7,
+            "lock": 7,
+            "reveal": 6,
+            "refund": 0,
+            "cancel": 0,
+            "receipt": 0,
+            "heartbeat": 0,
+        },
+        "unparseable_frame_count": 0,
+        "unknown_type_frame_count": 0,
+        "distinct_offer_count": 30884,
+        "accepted_offer_count": 7,
+        "accepts_with_unmatched_offer_ref": 0,
+        "downstream_frames_with_unmatched_contract": 0,
+        "partial_chain_frame_count": 0,
+        "locked_contract_count": 7,
+        "revealed_contract_count": 6,
+        "refunded_contract_count": 0,
+        "cancelled_contract_count": 0,
+        "receipt_claimed_contract_count": 0,
+        "completed_contract_count": 6,
+        "completion_rate": 6 / 30884,
+        "funnel": [
+            {"stage": "offers", "count": 30884},
+            {"stage": "accepted", "count": 7},
+            {"stage": "locked", "count": 7},
+            {"stage": "completed", "count": 6},
+        ],
+        "coverage_captured_total": 85000,
+        "coverage_dropped_total": 15000,
+        "coverage_ratio": 0.85,
+    }
+
+
+def test_tclk_is_recognized_and_both_rates_get_wilson_intervals():
+    data = _tclk_json()
+    assert detect_measurement_type(data) == "tclk"
+
+    stats = compute_uncertainty(data)
+
+    assert stats["unavailable_pairs"] == []
+    assert stats["no_interval_reason"] is None  # tclk gets real intervals, not the no-interval path
+    labels = [interval["label"] for interval in stats["intervals"]]
+    assert "completion rate (completed / distinct offers)" in labels
+    assert "acceptance rate (accepted / distinct offers)" in labels
+
+    completion = next(
+        i for i in stats["intervals"] if i["label"] == "completion rate (completed / distinct offers)"
+    )
+    acceptance = next(
+        i for i in stats["intervals"] if i["label"] == "acceptance rate (accepted / distinct offers)"
+    )
+    assert completion["k"] == 6
+    assert completion["n"] == 30884
+    assert acceptance["k"] == 7
+    assert acceptance["n"] == 30884
+
+    assert stats["coverage_floor_direction"].startswith(
+        "the completion and acceptance rates are floors"
+    )
+
+
+def test_tclk_completion_rate_interval_is_wide_relative_to_its_point_estimate():
+    # Contrast against a large-numerator case (duplication's real
+    # window-A figures from FINDINGS.md: 144,694 of 560,480) to prove the
+    # small-numerator width actually shows up, not just that some
+    # interval exists. Both intervals are tiny in ABSOLUTE probability
+    # terms when p_hat itself is tiny (that is just arithmetic), so the
+    # honest comparison is RELATIVE to each one's own point estimate.
+    tclk_stats = compute_uncertainty(_tclk_json())
+    completion = next(
+        i for i in tclk_stats["intervals"] if i["label"] == "completion rate (completed / distinct offers)"
+    )
+
+    duplication_data = {
+        "room": "lobby",
+        "messages_file_found": True,
+        "signed_checked": 560480,
+        "signed_reverified": 560480,
+        "signed_reverify_failed": 0,
+        "malformed_lines_skipped": 0,
+        "distinct_dids": 386731,
+        "distinct_texts": 407926,
+        "cross_key_duplicated_numerator": 144694,
+        "cross_key_duplicated_denominator": 560480,
+        "cross_key_duplication_rate": 144694 / 560480,
+        "top_duplicated_texts": [],
+        "coverage_captured_total": 560480,
+        "coverage_dropped_total": 193000,
+        "coverage_ratio": 0.744,
+    }
+    duplication_stats = compute_uncertainty(duplication_data)
+    duplication_rate = duplication_stats["intervals"][0]
+
+    # The completion rate's own numerator (6) is genuinely tiny against
+    # its denominator: the lower bound is a real, nonzero, positive
+    # number (not clamped to 0), and the interval spans several times
+    # its own point estimate -- upper is nearly 5x lower.
+    assert completion["lower"] > 0.0
+    assert completion["upper"] > 4 * completion["lower"]
+
+    completion_relative_half_width = completion["half_width"] / completion["p_hat"]
+    duplication_relative_half_width = duplication_rate["half_width"] / duplication_rate["p_hat"]
+
+    # The small-numerator interval is dramatically wider relative to its
+    # own point estimate than the large-numerator one -- proving the
+    # tiny numerator's uncertainty genuinely shows up, rather than being
+    # swallowed by the same "negligible" framing every large-n figure in
+    # this project already gets.
+    assert completion_relative_half_width > 50 * duplication_relative_half_width
+    assert completion_relative_half_width > 0.5  # more than half of its own point estimate
+    assert duplication_relative_half_width < 0.01  # under 1% of its own point estimate
+
+
+def test_tclk_no_did_or_key_string_leaks_into_uncertainty_output():
+    data = _tclk_json()
+    stats = compute_uncertainty(data)
+    dumped = json.dumps(stats, ensure_ascii=False, sort_keys=True)
+    assert "did:key:" not in dumped
+
+
+def test_tclk_report_states_completion_and_acceptance_with_intervals():
+    data = _tclk_json()
+    stats = compute_uncertainty(data)
+    report = format_report(stats, "tclk_lobby.json")
+
+    assert "Detected measurement type: tclk" in report
+    assert "completion rate (completed / distinct offers)" in report
+    assert "acceptance rate (accepted / distinct offers)" in report
+
+
 def test_clustering_no_interval_reason_appears_in_the_report():
     data = _clustering_json()
     stats = compute_uncertainty(data)

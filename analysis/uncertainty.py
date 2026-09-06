@@ -4,7 +4,7 @@ modules, not a measurement of its own.
 This module reads the already-written JSON output of one of the Basanos
 measurement modules (`analysis/duplication.py`, `coordination.py`,
 `synchrony.py`, `diurnal.py`, `nonce.py`, `diversity.py`, `cohort.py`,
-`clustering.py`) and
+`clustering.py`, `tclk.py`) and
 adds a sampling confidence interval to whichever reported rates have a
 clean integer numerator and denominator available in that file, plus a
 stated coverage-floor direction for that measurement type. It does NOT
@@ -135,6 +135,12 @@ COVERAGE_FLOOR_DIRECTIONS = {
         "add another shared post to a bounded template's key set, never remove one, so the "
         "true cluster sizes and counts are at least this concentrated, never less."
     ),
+    "tclk": (
+        "the completion and acceptance rates are floors: a completing or accepting frame "
+        "could be sitting in traffic the collector never captured, so true completion and "
+        "true acceptance can only be at least this, missing frames can only ever raise "
+        "them, never lower them."
+    ),
 }
 
 # Measurement types recognized by detect_measurement_type but deliberately
@@ -251,6 +257,29 @@ def _cohort_pairs(data):
     ]
 
 
+def _tclk_pairs(data):
+    # Both are genuine binomial proportions over the same well-defined
+    # denominator (distinct_offer_count): a count of offers that reached
+    # a later stage, out of every distinct offer captured. Unlike the
+    # large-n measurements above, tclk's numerators are tiny (single
+    # digits against tens of thousands of offers), so these intervals
+    # come out WIDE. That width is not a defect to suppress -- it is the
+    # quantitative form of the "read as a floor, tiny numbers" caveat
+    # tclk.py already states in prose.
+    return [
+        (
+            "completion rate (completed / distinct offers)",
+            data.get("completed_contract_count"),
+            data.get("distinct_offer_count"),
+        ),
+        (
+            "acceptance rate (accepted / distinct offers)",
+            data.get("accepted_offer_count"),
+            data.get("distinct_offer_count"),
+        ),
+    ]
+
+
 # Measurement type -> a function that pulls its candidate (label, k, n)
 # triples out of that measurement's JSON. nonce and synchrony are
 # deliberately absent: neither reports a clean single binary k/n
@@ -266,6 +295,7 @@ PAIR_EXTRACTORS = {
     "diurnal": _diurnal_pairs,
     "diversity": _diversity_pairs,
     "cohort": _cohort_pairs,
+    "tclk": _tclk_pairs,
 }
 
 
@@ -290,6 +320,8 @@ def detect_measurement_type(data):
         return "cohort"
     if "passes" in data and "keys_in_bounded_templates_count" in data:
         return "clustering"
+    if "total_tclk_frames" in data and "distinct_offer_count" in data:
+        return "tclk"
     return None
 
 
