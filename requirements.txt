@@ -1,2 +1,11 @@
-requests>=2.31
-cryptography>=42.0
+# Pinned to the exact versions the published measurements were produced and
+# verified against. cryptography carries the Ed25519 verification that every
+# number in FINDINGS.md rests on, so its version is load-bearing and is pinned
+# exactly; requests is the collector's HTTP client. To reproduce the published
+# results, install these versions.
+cryptography==50.0.1
+requests==2.34.2
+
+# pytest is the test runner (not a runtime dependency). It is unpinned because
+# it does not affect any measurement result; any recent pytest runs the suite.
+pytest
