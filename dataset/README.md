@@ -26,6 +26,7 @@ These are the exact runs the published findings quote.
 - `uncertainty_diversity.json`, Wilson intervals over the diversity output, showing the single-use rate's sampling interval is negligible. (from uncertainty_diversity_lobby_20260904T184458Z)
 - `uncertainty_duplication.json`, Wilson intervals over the cross-key duplication rate, showing the headline figure's sampling interval is negligible at this sample size. (produced by analysis.uncertainty over duplication.json)
 - `uncertainty_coordination.json`, Wilson intervals over the coordinated share and top-N concentration, both negligible at this sample size. (produced by analysis.uncertainty over coordination.json)
+- `uncertainty_tclk.json`, Wilson intervals over the tclk completion and acceptance rates; the completion interval spans nearly fivefold, the quantitative form of the small-numerator caveat the finding states in prose. (produced by analysis.uncertainty over tclk.json)
 
 ## The sample of signed records
 

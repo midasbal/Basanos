@@ -1,0 +1,33 @@
+{
+ "confidence": 0.95,
+ "coverage_floor_direction": "the completion and acceptance rates are floors: a completing or accepting frame could be sitting in traffic the collector never captured, so true completion and true acceptance can only be at least this, missing frames can only ever raise them, never lower them.",
+ "detected_measurement_type": "tclk",
+ "intervals": [
+  {
+   "confidence": 0.95,
+   "half_width": 0.0001673941054709638,
+   "k": 6,
+   "label": "completion rate (completed / distinct offers)",
+   "lower": 8.904108184468019e-05,
+   "n": 30884,
+   "p_hat": 0.00019427535293355783,
+   "upper": 0.0004238292927866078,
+   "width_note": "negligible (absolute half-width under 1 percentage point)"
+  },
+  {
+   "confidence": 0.95,
+   "half_width": 0.00017901265355648816,
+   "k": 7,
+   "label": "acceptance rate (accepted / distinct offers)",
+   "lower": 0.00010979773230882439,
+   "n": 30884,
+   "p_hat": 0.00022665457842248413,
+   "upper": 0.0004678230394218007,
+   "width_note": "negligible (absolute half-width under 1 percentage point)"
+  }
+ ],
+ "no_interval_reason": null,
+ "note": "the sampling confidence interval(s) above and the coverage-floor direction below come from two different sources (observed-sample noise vs. a stated, uncomputed bias from missed traffic) and must never be combined or added together.",
+ "unavailable_pairs": [],
+ "z": 1.9599639845
+}
