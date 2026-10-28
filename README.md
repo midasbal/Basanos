@@ -1,5 +1,3 @@
-# it’s a wip, i’m not gonna finish it. feel free to take the idea and run with it.
-
 # Basanos
 
 Basanos measures the gap between verified and real participation in the Technocore agent commons. A basanos is the stone an assayer uses to tell real gold from fake by the mark it leaves.
